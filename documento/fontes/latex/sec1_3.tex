@@ -1,0 +1,129 @@
+\section{Introdu\c{c}\~ao}
+
+O cen\'ario tratado neste trabalho \'e o de uma locadora de ve\'iculos que mant\'em cadastro de clientes, frota organizada por categorias e opera\c{c}\~ao em mais de uma filial. Cada loca\c{c}\~ao registra o ve\'iculo retirado, o cliente respons\'avel, a filial de retirada, a filial de devolu\c{c}\~ao (que pode ser diferente da de retirada) e as datas prevista e real de devolu\c{c}\~ao. A locadora tamb\'em controla o hist\'orico de manuten\c{c}\~ao de cada ve\'iculo.
+
+O objetivo do projeto \'e transformar esse cen\'ario em um banco de dados relacional documentado, modelado e normalizado. O documento est\'a organizado em tr\^es blocos que correspondem \`as tr\^es primeiras etapas do laborat\'orio. A Se\c{c}\~ao \ref{sec:levantamento} apresenta o levantamento das entidades e as regras de neg\'ocio. A Se\c{c}\~ao \ref{sec:dicionario} apresenta o dicion\'ario de dados. A Se\c{c}\~ao \ref{sec:der} apresenta o modelo entidade-relacionamento. A Se\c{c}\~ao \ref{sec:normalizacao} apresenta a normaliza\c{c}\~ao at\'e a Terceira Forma Normal.
+
+O SGBD adotado \'e o MySQL 8, escolhido por ser o ambiente utilizado em sala e por oferecer os recursos de integridade referencial necess\'arios ao modelo.
+
+\section{Levantamento e Regras do Neg\'ocio}
+\label{sec:levantamento}
+
+\subsection{Entidades identificadas}
+
+A leitura do cen\'ario resultou em sete entidades. As cinco primeiras correspondem \`a sugest\~ao m\'inima do enunciado. As duas \'ultimas foram acrescentadas a partir de elementos descritos no pr\'oprio texto do cen\'ario.
+
+\begin{enumerate}
+\item \textbf{CLIENTE}: pessoa f\'isica que assina o contrato de loca\c{c}\~ao. Guarda dados cadastrais e dados de habilita\c{c}\~ao, necess\'arios para autorizar a retirada.
+\item \textbf{FILIAL}: unidade f\'isica da locadora. Uma filial abriga ve\'iculos, realiza retiradas e recebe devolu\c{c}\~oes.
+\item \textbf{CATEGORIA}: classe comercial do ve\'iculo (econ\^omico, intermedi\'ario, SUV, luxo, utilit\'ario). Define o valor da di\'aria, a franquia de quil\^ometros e o valor do quil\^ometro excedente.
+\item \textbf{VEICULO}: unidade da frota, identificada por placa e chassi. Pertence a uma categoria e est\'a lotado em uma filial.
+\item \textbf{LOCACAO}: contrato de aluguel. Registra cliente, ve\'iculo, filial de retirada, filial de devolu\c{c}\~ao, datas, quilometragens e valores.
+\item \textbf{DOCUMENTO\_VEICULO}: dados documentais e de seguro do ve\'iculo (RENAVAM, CRLV, licenciamento, ap\'olice). Existe no m\'aximo um registro por ve\'iculo.
+\item \textbf{MANUTENCAO}: ocorr\^encia de manuten\c{c}\~ao de um ve\'iculo, com tipo, per\'iodo, custo e fornecedor. Corresponde ao hist\'orico de manuten\c{c}\~ao citado como opcional no cen\'ario.
+\end{enumerate}
+
+\subsection{Regras de neg\'ocio}
+
+As regras de neg\'ocio levantadas est\~ao consolidadas na Tabela \ref{tab:rn}, com a forma de implementa\c{c}\~ao prevista no banco. As regras RN-001 a RN-004 correspondem diretamente aos quatro pontos que o enunciado exige que o modelo resolva.
+
+\begin{table*}[!t]
+\caption{Regras de neg\'ocio e integridade}
+\label{tab:rn}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{|C{1.3cm}|L{5.2cm}|L{4.0cm}|L{2.5cm}|L{3.4cm}|}
+\hline
+\textbf{ID} & \textbf{Regra} & \textbf{Tabelas/campos envolvidos} & \textbf{Implementa\c{c}\~ao} & \textbf{Observa\c{c}\~oes} \\
+\hline
+RN-001 & Uma loca\c{c}\~ao pertence a um \'unico cliente e um cliente pode ter v\'arias loca\c{c}\~oes & LOCACAO.id\_cliente $\rightarrow$ CLIENTE.id\_cliente & FOREIGN KEY + NOT NULL & Cardinalidade 1:N \\
+\hline
+RN-002 & Um ve\'iculo pode ser alugado v\'arias vezes ao longo do tempo & LOCACAO.id\_veiculo $\rightarrow$ VEICULO.id\_veiculo & FOREIGN KEY + NOT NULL & Cardinalidade 1:N \\
+\hline
+RN-003 & A filial de retirada e a filial de devolu\c{c}\~ao podem ser diferentes & LOCACAO.id\_filial\_retirada, LOCACAO.id\_filial\_devolucao & Duas FOREIGN KEY independentes para FILIAL & Dois relacionamentos distintos \\
+\hline
+RN-004 & Cada ve\'iculo pertence a uma categoria, que define o valor da di\'aria & VEICULO.id\_categoria $\rightarrow$ CATEGORIA.id\_categoria; CATEGORIA.valor\_diaria & FOREIGN KEY + NOT NULL & Valor da di\'aria fica na categoria \\
+\hline
+RN-005 & Um CPF n\~ao pode pertencer a dois clientes & CLIENTE.cpf & UNIQUE + NOT NULL & Identificador natural \\
+\hline
+RN-006 & Uma placa n\~ao pode pertencer a dois ve\'iculos & VEICULO.placa & UNIQUE + NOT NULL & Exigido pelo enunciado \\
+\hline
+RN-007 & A data prevista de devolu\c{c}\~ao n\~ao pode ser anterior \`a data de retirada & LOCACAO.data\_retirada, LOCACAO.data\_prevista\_devolucao & CHECK & Valida o per\'iodo do contrato \\
+\hline
+RN-008 & Uma loca\c{c}\~ao em aberto \'e aquela sem data real de devolu\c{c}\~ao preenchida & LOCACAO.data\_real\_devolucao & Campo NULL permitido & Base da consulta 1 da Etapa 5 \\
+\hline
+RN-009 & O valor da di\'aria contratada \'e congelado no momento da assinatura & LOCACAO.valor\_diaria\_contratada & NOT NULL, preenchido pela aplica\c{c}\~ao & Preserva hist\'orico de pre\c{c}o \\
+\hline
+RN-010 & Um ve\'iculo possui no m\'aximo um registro documental & DOCUMENTO\_VEICULO.id\_veiculo & PRIMARY KEY que tamb\'em \'e FOREIGN KEY & Garante cardinalidade 1:1 \\
+\hline
+RN-011 & O custo de uma manuten\c{c}\~ao n\~ao pode ser negativo & MANUTENCAO.custo & CHECK & Consist\^encia financeira \\
+\hline
+RN-012 & Um ve\'iculo n\~ao pode ser exclu\'ido enquanto existirem loca\c{c}\~oes associadas & LOCACAO.id\_veiculo & FOREIGN KEY com ON DELETE RESTRICT & Preserva hist\'orico \\
+\hline
+\end{tabular}
+\end{table*}
+
+\section{Dicion\'ario de Dados}
+\label{sec:dicionario}
+
+O dicion\'ario segue o modelo de documenta\c{c}\~ao adotado na disciplina. Ele cobre a identifica\c{c}\~ao do projeto, o invent\'ario de tabelas, a ficha de campos de cada tabela, as chaves e relacionamentos, as regras de neg\'ocio, os dom\'inios controlados, os \'indices e o versionamento.
+
+\subsection{Identifica\c{c}\~ao do projeto}
+
+A Tabela \ref{tab:ident} identifica o projeto, o banco, o SGBD e a vers\~ao deste dicion\'ario.
+
+\begin{table}[!h]
+\caption{Identifica\c{c}\~ao do projeto}
+\label{tab:ident}
+\centering
+\footnotesize
+\begin{tabular}{|L{2.6cm}|L{4.8cm}|}
+\hline
+\textbf{Projeto / Sistema} & Sistema de Loca\c{c}\~ao de Ve\'iculos \\
+\hline
+\textbf{Banco de Dados} & \texttt{locadora} \\
+\hline
+\textbf{SGBD / Vers\~ao} & MySQL 8 \\
+\hline
+\textbf{Respons\'avel} & Grupo 3 \\
+\hline
+\textbf{Vers\~ao do documento} & 1.0 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Invent\'ario de tabelas}
+
+O invent\'ario das sete tabelas est\'a na Tabela \ref{tab:inventario}.
+
+\begin{table*}[!t]
+\caption{Invent\'ario de tabelas}
+\label{tab:inventario}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{|L{2.9cm}|L{4.3cm}|L{3.5cm}|L{3.4cm}|L{2.5cm}|}
+\hline
+\textbf{Tabela} & \textbf{Descri\c{c}\~ao} & \textbf{Responsabilidade} & \textbf{Relacionamentos} & \textbf{Observa\c{c}\~oes} \\
+\hline
+\texttt{cliente} & Cadastro dos clientes pessoa f\'isica da locadora & Guardar dados cadastrais e de habilita\c{c}\~ao do respons\'avel pelo contrato & Referenciada por \texttt{locacao} & Identificador natural: CPF \\
+\hline
+\texttt{filial} & Unidades f\'isicas onde a locadora opera & Localizar frota, retiradas e devolu\c{c}\~oes & Referenciada por \texttt{veiculo} e por \texttt{locacao} (duas vezes) & Identificador natural: CNPJ \\
+\hline
+\texttt{categoria} & Classes comerciais dos ve\'iculos & Definir valor da di\'aria, franquia e valor do km excedente & Referenciada por \texttt{veiculo} & Tabela de dom\'inio de neg\'ocio \\
+\hline
+\texttt{veiculo} & Unidades da frota & Representar cada ve\'iculo dispon\'ivel para loca\c{c}\~ao & FK para \texttt{categoria} e \texttt{filial}; referenciada por \texttt{locacao}, \texttt{manutencao} e \texttt{documento\_veiculo} & Identificadores naturais: placa e chassi \\
+\hline
+\texttt{documento\_veiculo} & Dados documentais e de seguro do ve\'iculo & Isolar informa\c{c}\~ao regulat\'oria de baixa volatilidade & FK e PK para \texttt{veiculo} & Cardinalidade 1:1 \\
+\hline
+\texttt{locacao} & Contratos de aluguel & Registrar a opera\c{c}\~ao completa de retirada e devolu\c{c}\~ao & FK para \texttt{cliente}, \texttt{veiculo} e \texttt{filial} (retirada e devolu\c{c}\~ao) & Resolve o N:N entre cliente e ve\'iculo \\
+\hline
+\texttt{manutencao} & Hist\'orico de manuten\c{c}\~ao da frota & Registrar interven\c{c}\~oes, custos e per\'iodos de indisponibilidade & FK para \texttt{veiculo} & Base da consulta opcional de custo \\
+\hline
+\end{tabular}
+\end{table*}
+
+\subsection{Fichas de campos}
+
+A ficha de cada tabela, com campo, descri\c{c}\~ao, tipo, tamanho, obrigatoriedade, chave prim\'aria, chave estrangeira, valor padr\~ao, regra de dom\'inio, exemplo e observa\c{c}\~oes, est\'a no Ap\^endice \ref{ap:fichas}, das Tabelas \ref{tab:f_cliente} a \ref{tab:f_manutencao}.

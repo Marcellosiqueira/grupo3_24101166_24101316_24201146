@@ -1,0 +1,337 @@
+\appendices
+\section{Fichas do Dicion\'ario de Dados}
+\label{ap:fichas}
+
+As Tabelas \ref{tab:f_cliente} a \ref{tab:f_manutencao} apresentam a ficha de campos de cada tabela do modelo final. A coluna Tam. indica o tamanho declarado quando aplic\'avel. A marca\c{c}\~ao n/a indica que o item n\~ao se aplica ao campo.
+
+\begin{table*}[!t]
+\caption{Ficha de campos da tabela \texttt{cliente}}
+\label{tab:f_cliente}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{|L{3.2cm}|L{14.2cm}|}
+\hline
+\textbf{Nome da tabela} & \texttt{cliente} \\
+\hline
+\textbf{Descri\c{c}\~ao} & Cadastro dos clientes pessoa f\'isica da locadora. \\
+\hline
+\textbf{Finalidade} & Guardar os dados cadastrais e de habilita\c{c}\~ao do respons\'avel pelo contrato de loca\c{c}\~ao. \\
+\hline
+\textbf{Respons\'avel} & Grupo 3 \\
+\hline
+\end{tabular}
+
+\vspace{3pt}
+
+\begin{tabular}{|L{2.15cm}|L{2.7cm}|L{1.15cm}|C{0.62cm}|C{0.62cm}|C{0.5cm}|C{0.5cm}|L{1.45cm}|L{2.6cm}|L{2.0cm}|L{1.85cm}|}
+\hline
+\textbf{Campo} & \textbf{Descri\c{c}\~ao} & \textbf{Tipo} & \textbf{Tam.} & \textbf{Nulo?} & \textbf{PK?} & \textbf{FK?} & \textbf{Default} & \textbf{Regra / Dom\'inio} & \textbf{Exemplo} & \textbf{Observa\c{c}\~oes} \\
+\hline
+\texttt{id\_\allowbreak{}cliente} & Identificador do cliente & INT & n/a & N\~ao & Sim & N\~ao & AUTO\_\allowbreak{}INC & Inteiro maior que zero & 1 & Chave prim\'aria substituta \\
+\hline
+\texttt{nome} & Nome completo do cliente & VARCHAR & 120 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & Marcello Siqueira & \'Indice de busca \\
+\hline
+\texttt{cpf} & CPF do cliente & CHAR & 11 & N\~ao & N\~ao & N\~ao & n/a & 11 d\'igitos num\'ericos, \'unico & 07894561203 & UNIQUE (RN-005) \\
+\hline
+\texttt{num\_\allowbreak{}cnh} & N\'umero do registro da CNH & CHAR & 11 & N\~ao & N\~ao & N\~ao & n/a & 11 d\'igitos, \'unico & 03214785690 & UNIQUE \\
+\hline
+\texttt{cat\_\allowbreak{}cnh} & Categoria da habilita\c{c}\~ao & CHAR & 2 & N\~ao & N\~ao & N\~ao & n/a & A, B, AB, C, D, E & B & Dom\'inio controlado \\
+\hline
+\texttt{validade\_\allowbreak{}cnh} & Data de validade da CNH & DATE & n/a & N\~ao & N\~ao & N\~ao & n/a & Data futura na retirada & 2029-04-18 & Verificada na loca\c{c}\~ao \\
+\hline
+\texttt{data\_\allowbreak{}nascimento} & Data de nascimento & DATE & n/a & N\~ao & N\~ao & N\~ao & n/a & Cliente com 18 anos ou mais & 1998-03-22 & Validado pela aplica\c{c}\~ao \\
+\hline
+\texttt{telefone} & Telefone de contato & VARCHAR & 15 & N\~ao & N\~ao & N\~ao & n/a & Somente d\'igitos e s\'imbolos & 61991819883 & Contato principal \\
+\hline
+\texttt{email} & Correio eletr\^onico & VARCHAR & 120 & Sim & N\~ao & N\~ao & NULL & Formato de e-mail, \'unico & cliente@\allowbreak{}dominio.com & UNIQUE, opcional \\
+\hline
+\texttt{logradouro} & Endere\c{c}o do cliente & VARCHAR & 150 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & SHIN QI 5 Conj 3 & Atomizado na 1FN \\
+\hline
+\texttt{cidade} & Cidade de resid\^encia & VARCHAR & 60 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & Bras\'ilia & Atomizado na 1FN \\
+\hline
+\texttt{uf} & Unidade federativa & CHAR & 2 & N\~ao & N\~ao & N\~ao & n/a & Sigla de UF v\'alida & DF & Atomizado na 1FN \\
+\hline
+\texttt{cep} & C\'odigo postal & CHAR & 8 & N\~ao & N\~ao & N\~ao & n/a & 8 d\'igitos num\'ericos & 71503035 & Atomizado na 1FN \\
+\hline
+\texttt{data\_\allowbreak{}cadastro} & Data de abertura do cadastro & DATETIME & n/a & N\~ao & N\~ao & N\~ao & CURRENT\_\allowbreak{}TIMESTAMP & Preenchida pelo SGBD & 2026-09-14 10:12:00 & Auditoria \\
+\hline
+\texttt{status} & Situa\c{c}\~ao cadastral & VARCHAR & 10 & N\~ao & N\~ao & N\~ao & 'ATIVO' & ATIVO, INATIVO, BLOQUEADO & ATIVO & Dom\'inio controlado \\
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[!t]
+\caption{Ficha de campos da tabela \texttt{filial}}
+\label{tab:f_filial}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{|L{3.2cm}|L{14.2cm}|}
+\hline
+\textbf{Nome da tabela} & \texttt{filial} \\
+\hline
+\textbf{Descri\c{c}\~ao} & Unidades f\'isicas onde a locadora opera. \\
+\hline
+\textbf{Finalidade} & Localizar a frota e registrar os pontos de retirada e de devolu\c{c}\~ao dos ve\'iculos. \\
+\hline
+\textbf{Respons\'avel} & Grupo 3 \\
+\hline
+\end{tabular}
+
+\vspace{3pt}
+
+\begin{tabular}{|L{2.15cm}|L{2.7cm}|L{1.15cm}|C{0.62cm}|C{0.62cm}|C{0.5cm}|C{0.5cm}|L{1.45cm}|L{2.6cm}|L{2.0cm}|L{1.85cm}|}
+\hline
+\textbf{Campo} & \textbf{Descri\c{c}\~ao} & \textbf{Tipo} & \textbf{Tam.} & \textbf{Nulo?} & \textbf{PK?} & \textbf{FK?} & \textbf{Default} & \textbf{Regra / Dom\'inio} & \textbf{Exemplo} & \textbf{Observa\c{c}\~oes} \\
+\hline
+\texttt{id\_\allowbreak{}filial} & Identificador da filial & INT & n/a & N\~ao & Sim & N\~ao & AUTO\_\allowbreak{}INC & Inteiro maior que zero & 1 & Chave prim\'aria substituta \\
+\hline
+\texttt{nome} & Nome da unidade & VARCHAR & 80 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & Filial Asa Sul & Usado em relat\'orios \\
+\hline
+\texttt{cnpj} & CNPJ da filial & CHAR & 14 & N\~ao & N\~ao & N\~ao & n/a & 14 d\'igitos, \'unico & 12345678000190 & UNIQUE \\
+\hline
+\texttt{logradouro} & Endere\c{c}o da filial & VARCHAR & 150 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & SGAS 607 Bloco A & Atomizado na 1FN \\
+\hline
+\texttt{cidade} & Cidade da filial & VARCHAR & 60 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & Bras\'ilia & Atomizado na 1FN \\
+\hline
+\texttt{uf} & Unidade federativa & CHAR & 2 & N\~ao & N\~ao & N\~ao & n/a & Sigla de UF v\'alida & DF & Atomizado na 1FN \\
+\hline
+\texttt{cep} & C\'odigo postal & CHAR & 8 & N\~ao & N\~ao & N\~ao & n/a & 8 d\'igitos num\'ericos & 70200670 & Atomizado na 1FN \\
+\hline
+\texttt{telefone} & Telefone da filial & VARCHAR & 15 & N\~ao & N\~ao & N\~ao & n/a & Somente d\'igitos e s\'imbolos & 6135356565 & Contato da unidade \\
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[!t]
+\caption{Ficha de campos da tabela \texttt{categoria}}
+\label{tab:f_categoria}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{|L{3.2cm}|L{14.2cm}|}
+\hline
+\textbf{Nome da tabela} & \texttt{categoria} \\
+\hline
+\textbf{Descri\c{c}\~ao} & Classes comerciais que agrupam os ve\'iculos da frota. \\
+\hline
+\textbf{Finalidade} & Definir o valor da di\'aria, a franquia de quil\^ometros e o valor do quil\^ometro excedente. \\
+\hline
+\textbf{Respons\'avel} & Grupo 3 \\
+\hline
+\end{tabular}
+
+\vspace{3pt}
+
+\begin{tabular}{|L{2.15cm}|L{2.7cm}|L{1.15cm}|C{0.62cm}|C{0.62cm}|C{0.5cm}|C{0.5cm}|L{1.45cm}|L{2.6cm}|L{2.0cm}|L{1.85cm}|}
+\hline
+\textbf{Campo} & \textbf{Descri\c{c}\~ao} & \textbf{Tipo} & \textbf{Tam.} & \textbf{Nulo?} & \textbf{PK?} & \textbf{FK?} & \textbf{Default} & \textbf{Regra / Dom\'inio} & \textbf{Exemplo} & \textbf{Observa\c{c}\~oes} \\
+\hline
+\texttt{id\_\allowbreak{}categoria} & Identificador da categoria & INT & n/a & N\~ao & Sim & N\~ao & AUTO\_\allowbreak{}INC & Inteiro maior que zero & 3 & Chave prim\'aria substituta \\
+\hline
+\texttt{nome} & Nome comercial da categoria & VARCHAR & 40 & N\~ao & N\~ao & N\~ao & n/a & \'{U}nico, n\~ao vazio & SUV & UNIQUE \\
+\hline
+\texttt{descricao} & Descri\c{c}\~ao da categoria & VARCHAR & 200 & Sim & N\~ao & N\~ao & NULL & Texto livre & Ve\'iculo alto, 5 lugares & Campo opcional \\
+\hline
+\texttt{valor\_\allowbreak{}diaria} & Valor da di\'aria vigente & DECIMAL & 10,2 & N\~ao & N\~ao & N\~ao & n/a & Maior que zero & 289.90 & Atende ao RN-004 \\
+\hline
+\texttt{franquia\_\allowbreak{}km} & Quil\^ometros inclusos por dia & INT & n/a & N\~ao & N\~ao & N\~ao & 200 & Maior ou igual a zero & 200 & Base do excedente \\
+\hline
+\texttt{valor\_\allowbreak{}km\_\allowbreak{}excedente} & Valor por km acima da franquia & DECIMAL & 10,2 & N\~ao & N\~ao & N\~ao & 1.50 & Maior ou igual a zero & 1.90 & Usado no fechamento \\
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[!t]
+\caption{Ficha de campos da tabela \texttt{veiculo}}
+\label{tab:f_veiculo}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{|L{3.2cm}|L{14.2cm}|}
+\hline
+\textbf{Nome da tabela} & \texttt{veiculo} \\
+\hline
+\textbf{Descri\c{c}\~ao} & Unidades da frota dispon\'iveis para loca\c{c}\~ao. \\
+\hline
+\textbf{Finalidade} & Representar cada ve\'iculo, sua categoria, sua filial de lota\c{c}\~ao e sua situa\c{c}\~ao operacional. \\
+\hline
+\textbf{Respons\'avel} & Grupo 3 \\
+\hline
+\end{tabular}
+
+\vspace{3pt}
+
+\begin{tabular}{|L{2.15cm}|L{2.7cm}|L{1.15cm}|C{0.62cm}|C{0.62cm}|C{0.5cm}|C{0.5cm}|L{1.45cm}|L{2.6cm}|L{2.0cm}|L{1.85cm}|}
+\hline
+\textbf{Campo} & \textbf{Descri\c{c}\~ao} & \textbf{Tipo} & \textbf{Tam.} & \textbf{Nulo?} & \textbf{PK?} & \textbf{FK?} & \textbf{Default} & \textbf{Regra / Dom\'inio} & \textbf{Exemplo} & \textbf{Observa\c{c}\~oes} \\
+\hline
+\texttt{id\_\allowbreak{}veiculo} & Identificador do ve\'iculo & INT & n/a & N\~ao & Sim & N\~ao & AUTO\_\allowbreak{}INC & Inteiro maior que zero & 7 & Chave prim\'aria substituta \\
+\hline
+\texttt{placa} & Placa do ve\'iculo & CHAR & 7 & N\~ao & N\~ao & N\~ao & n/a & Padr\~ao Mercosul, \'unica & JKL5C21 & UNIQUE (RN-006) \\
+\hline
+\texttt{chassi} & N\'umero do chassi & CHAR & 17 & N\~ao & N\~ao & N\~ao & n/a & 17 caracteres, \'unico & 9BWZZZ377VT004251 & UNIQUE \\
+\hline
+\texttt{marca} & Fabricante do ve\'iculo & VARCHAR & 40 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & Toyota & Atomizado na 1FN \\
+\hline
+\texttt{modelo} & Modelo do ve\'iculo & VARCHAR & 60 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & Corolla Cross & Atomizado na 1FN \\
+\hline
+\texttt{ano\_\allowbreak{}fabricacao} & Ano de fabrica\c{c}\~ao & SMALLINT & n/a & N\~ao & N\~ao & N\~ao & n/a & Maior ou igual a 1990 & 2024 & CHECK de intervalo \\
+\hline
+\texttt{ano\_\allowbreak{}modelo} & Ano do modelo & SMALLINT & n/a & N\~ao & N\~ao & N\~ao & n/a & Maior ou igual ao de fabrica\c{c}\~ao & 2025 & CHECK de coer\^encia \\
+\hline
+\texttt{cor} & Cor predominante & VARCHAR & 30 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & Prata & Campo descritivo \\
+\hline
+\texttt{combustivel} & Tipo de combust\'ivel & VARCHAR & 15 & N\~ao & N\~ao & N\~ao & 'FLEX' & FLEX, GASOLINA, DIESEL, ELETRICO, HIBRIDO & FLEX & Dom\'inio controlado \\
+\hline
+\texttt{km\_\allowbreak{}atual} & Quilometragem corrente & INT & n/a & N\~ao & N\~ao & N\~ao & 0 & Maior ou igual a zero & 18420 & Atualizado na devolu\c{c}\~ao \\
+\hline
+\texttt{status} & Situa\c{c}\~ao do ve\'iculo & VARCHAR & 15 & N\~ao & N\~ao & N\~ao & 'DISPONIVEL' & DISPONIVEL, LOCADO, MANUTENCAO, INATIVO & DISPONIVEL & Base da consulta 2 \\
+\hline
+\texttt{id\_\allowbreak{}categoria} & Categoria do ve\'iculo & INT & n/a & N\~ao & N\~ao & Sim & n/a & Deve existir em \texttt{categoria} & 3 & FK, ON DELETE RESTRICT \\
+\hline
+\texttt{id\_\allowbreak{}filial} & Filial de lota\c{c}\~ao & INT & n/a & N\~ao & N\~ao & Sim & n/a & Deve existir em \texttt{filial} & 1 & FK, ON DELETE RESTRICT \\
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[!t]
+\caption{Ficha de campos da tabela \texttt{documento\textbackslash \_veiculo}}
+\label{tab:f_documento}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{|L{3.2cm}|L{14.2cm}|}
+\hline
+\textbf{Nome da tabela} & \texttt{documento\textbackslash \_veiculo} \\
+\hline
+\textbf{Descri\c{c}\~ao} & Dados documentais e de seguro do ve\'iculo. \\
+\hline
+\textbf{Finalidade} & Isolar a informa\c{c}\~ao regulat\'oria de baixa volatilidade, em rela\c{c}\~ao 1:1 com o ve\'iculo. \\
+\hline
+\textbf{Respons\'avel} & Grupo 3 \\
+\hline
+\end{tabular}
+
+\vspace{3pt}
+
+\begin{tabular}{|L{2.15cm}|L{2.7cm}|L{1.15cm}|C{0.62cm}|C{0.62cm}|C{0.5cm}|C{0.5cm}|L{1.45cm}|L{2.6cm}|L{2.0cm}|L{1.85cm}|}
+\hline
+\textbf{Campo} & \textbf{Descri\c{c}\~ao} & \textbf{Tipo} & \textbf{Tam.} & \textbf{Nulo?} & \textbf{PK?} & \textbf{FK?} & \textbf{Default} & \textbf{Regra / Dom\'inio} & \textbf{Exemplo} & \textbf{Observa\c{c}\~oes} \\
+\hline
+\texttt{id\_\allowbreak{}veiculo} & Ve\'iculo a que o documento pertence & INT & n/a & N\~ao & Sim & Sim & n/a & Deve existir em \texttt{veiculo} & 7 & PK e FK, garante o 1:1 (RN-010) \\
+\hline
+\texttt{renavam} & C\'odigo RENAVAM & CHAR & 11 & N\~ao & N\~ao & N\~ao & n/a & 11 d\'igitos, \'unico & 00987654321 & UNIQUE \\
+\hline
+\texttt{num\_\allowbreak{}crlv} & N\'umero do CRLV & VARCHAR & 20 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & CRLV2026007412 & Documento de porte \\
+\hline
+\texttt{ano\_\allowbreak{}licenciamento} & Ano do licenciamento & SMALLINT & n/a & N\~ao & N\~ao & N\~ao & n/a & Maior ou igual a 1990 & 2026 & CHECK de intervalo \\
+\hline
+\texttt{venc\_\allowbreak{}licenciamento} & Vencimento do licenciamento & DATE & n/a & N\~ao & N\~ao & N\~ao & n/a & Data v\'alida & 2026-12-31 & Controle de regularidade \\
+\hline
+\texttt{apolice\_\allowbreak{}seguro} & N\'umero da ap\'olice & VARCHAR & 30 & Sim & N\~ao & N\~ao & NULL & Texto livre & AP-2026-55412 & Opcional em transfer\^encia \\
+\hline
+\texttt{seguradora} & Nome da seguradora & VARCHAR & 80 & Sim & N\~ao & N\~ao & NULL & Texto livre & Porto Seguro & Opcional \\
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[!t]
+\caption{Ficha de campos da tabela \texttt{locacao}}
+\label{tab:f_locacao}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{|L{3.2cm}|L{14.2cm}|}
+\hline
+\textbf{Nome da tabela} & \texttt{locacao} \\
+\hline
+\textbf{Descri\c{c}\~ao} & Contratos de loca\c{c}\~ao firmados com os clientes. \\
+\hline
+\textbf{Finalidade} & Registrar a opera\c{c}\~ao completa de retirada e devolu\c{c}\~ao e resolver o relacionamento N:N entre cliente e ve\'iculo. \\
+\hline
+\textbf{Respons\'avel} & Grupo 3 \\
+\hline
+\end{tabular}
+
+\vspace{3pt}
+
+\begin{tabular}{|L{2.15cm}|L{2.7cm}|L{1.15cm}|C{0.62cm}|C{0.62cm}|C{0.5cm}|C{0.5cm}|L{1.45cm}|L{2.6cm}|L{2.0cm}|L{1.85cm}|}
+\hline
+\textbf{Campo} & \textbf{Descri\c{c}\~ao} & \textbf{Tipo} & \textbf{Tam.} & \textbf{Nulo?} & \textbf{PK?} & \textbf{FK?} & \textbf{Default} & \textbf{Regra / Dom\'inio} & \textbf{Exemplo} & \textbf{Observa\c{c}\~oes} \\
+\hline
+\texttt{id\_\allowbreak{}locacao} & Identificador do contrato & INT & n/a & N\~ao & Sim & N\~ao & AUTO\_\allowbreak{}INC & Inteiro maior que zero & 12 & Chave prim\'aria substituta \\
+\hline
+\texttt{id\_\allowbreak{}cliente} & Cliente respons\'avel & INT & n/a & N\~ao & N\~ao & Sim & n/a & Deve existir em \texttt{cliente} & 1 & FK (RN-001) \\
+\hline
+\texttt{id\_\allowbreak{}veiculo} & Ve\'iculo retirado & INT & n/a & N\~ao & N\~ao & Sim & n/a & Deve existir em \texttt{veiculo} & 7 & FK (RN-002) \\
+\hline
+\texttt{id\_\allowbreak{}filial\_\allowbreak{}retirada} & Filial onde houve a retirada & INT & n/a & N\~ao & N\~ao & Sim & n/a & Deve existir em \texttt{filial} & 1 & FK (RN-003) \\
+\hline
+\texttt{id\_\allowbreak{}filial\_\allowbreak{}devolucao} & Filial prevista para devolu\c{c}\~ao & INT & n/a & N\~ao & N\~ao & Sim & n/a & Deve existir em \texttt{filial} & 2 & Pode diferir da retirada \\
+\hline
+\texttt{data\_\allowbreak{}retirada} & Data e hora da retirada & DATETIME & n/a & N\~ao & N\~ao & N\~ao & n/a & Data v\'alida & 2026-09-02 09:00:00 & In\'icio do contrato \\
+\hline
+\texttt{data\_\allowbreak{}prevista\_\allowbreak{}devolucao} & Data e hora previstas & DATETIME & n/a & N\~ao & N\~ao & N\~ao & n/a & Posterior \`a retirada & 2026-09-07 09:00:00 & CHECK (RN-007) \\
+\hline
+\texttt{data\_\allowbreak{}real\_\allowbreak{}devolucao} & Data e hora efetivas & DATETIME & n/a & Sim & N\~ao & N\~ao & NULL & Nula enquanto em aberto & 2026-09-08 11:30:00 & Base da consulta 1 (RN-008) \\
+\hline
+\texttt{valor\_\allowbreak{}diaria\_\allowbreak{}contratada} & Di\'aria vigente na assinatura & DECIMAL & 10,2 & N\~ao & N\~ao & N\~ao & n/a & Maior que zero & 289.90 & Congela o pre\c{c}o (RN-009) \\
+\hline
+\texttt{km\_\allowbreak{}retirada} & Quilometragem na retirada & INT & n/a & N\~ao & N\~ao & N\~ao & n/a & Maior ou igual a zero & 18420 & Base do excedente \\
+\hline
+\texttt{km\_\allowbreak{}devolucao} & Quilometragem na devolu\c{c}\~ao & INT & n/a & Sim & N\~ao & N\~ao & NULL & Maior ou igual ao de retirada & 19105 & Nulo enquanto em aberto \\
+\hline
+\texttt{valor\_\allowbreak{}total} & Valor faturado no fechamento & DECIMAL & 10,2 & Sim & N\~ao & N\~ao & NULL & Maior ou igual a zero & 1751.30 & Derivado, ver Se\c{c}\~ao V \\
+\hline
+\texttt{status} & Situa\c{c}\~ao do contrato & VARCHAR & 15 & N\~ao & N\~ao & N\~ao & 'ABERTA' & ABERTA, FINALIZADA, CANCELADA & FINALIZADA & Dom\'inio controlado \\
+\hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[!t]
+\caption{Ficha de campos da tabela \texttt{manutencao}}
+\label{tab:f_manutencao}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{|L{3.2cm}|L{14.2cm}|}
+\hline
+\textbf{Nome da tabela} & \texttt{manutencao} \\
+\hline
+\textbf{Descri\c{c}\~ao} & Hist\'orico de manuten\c{c}\~ao da frota. \\
+\hline
+\textbf{Finalidade} & Registrar interven\c{c}\~oes, custos e per\'iodos de indisponibilidade de cada ve\'iculo. \\
+\hline
+\textbf{Respons\'avel} & Grupo 3 \\
+\hline
+\end{tabular}
+
+\vspace{3pt}
+
+\begin{tabular}{|L{2.15cm}|L{2.7cm}|L{1.15cm}|C{0.62cm}|C{0.62cm}|C{0.5cm}|C{0.5cm}|L{1.45cm}|L{2.6cm}|L{2.0cm}|L{1.85cm}|}
+\hline
+\textbf{Campo} & \textbf{Descri\c{c}\~ao} & \textbf{Tipo} & \textbf{Tam.} & \textbf{Nulo?} & \textbf{PK?} & \textbf{FK?} & \textbf{Default} & \textbf{Regra / Dom\'inio} & \textbf{Exemplo} & \textbf{Observa\c{c}\~oes} \\
+\hline
+\texttt{id\_\allowbreak{}manutencao} & Identificador da manuten\c{c}\~ao & INT & n/a & N\~ao & Sim & N\~ao & AUTO\_\allowbreak{}INC & Inteiro maior que zero & 4 & Chave prim\'aria substituta \\
+\hline
+\texttt{id\_\allowbreak{}veiculo} & Ve\'iculo atendido & INT & n/a & N\~ao & N\~ao & Sim & n/a & Deve existir em \texttt{veiculo} & 7 & FK, ON DELETE RESTRICT \\
+\hline
+\texttt{tipo} & Natureza da interven\c{c}\~ao & VARCHAR & 15 & N\~ao & N\~ao & N\~ao & n/a & PREVENTIVA, CORRETIVA, REVISAO & PREVENTIVA & Dom\'inio controlado \\
+\hline
+\texttt{descricao} & Servi\c{c}o executado & VARCHAR & 200 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & Troca de \'oleo e filtros & Texto descritivo \\
+\hline
+\texttt{data\_\allowbreak{}entrada} & Entrada na oficina & DATE & n/a & N\~ao & N\~ao & N\~ao & n/a & Data v\'alida & 2026-08-11 & In\'icio da indisponibilidade \\
+\hline
+\texttt{data\_\allowbreak{}saida} & Sa\'ida da oficina & DATE & n/a & Sim & N\~ao & N\~ao & NULL & Igual ou posterior \`a entrada & 2026-08-12 & Nula enquanto em servi\c{c}o \\
+\hline
+\texttt{km\_\allowbreak{}manutencao} & Quilometragem na entrada & INT & n/a & N\~ao & N\~ao & N\~ao & n/a & Maior ou igual a zero & 18000 & Controle de revis\~ao \\
+\hline
+\texttt{custo} & Custo da interven\c{c}\~ao & DECIMAL & 10,2 & N\~ao & N\~ao & N\~ao & n/a & Maior ou igual a zero & 640.00 & CHECK (RN-011) \\
+\hline
+\texttt{fornecedor} & Oficina ou concession\'aria & VARCHAR & 100 & N\~ao & N\~ao & N\~ao & n/a & N\~ao vazio & Concession\'aria Sul & Base do custo por fornecedor \\
+\hline
+\end{tabular}
+\end{table*}
+

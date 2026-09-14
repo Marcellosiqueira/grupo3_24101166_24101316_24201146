@@ -1,0 +1,67 @@
+\documentclass[conference,a4paper,10pt]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{pdflscape}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  framesep=3pt,
+  keywordstyle=\bfseries,
+  language=SQL,
+  showstringspaces=false,
+  captionpos=b
+}
+
+\renewcommand{\IEEEkeywordsname}{Palavras-chave}
+
+\begin{document}
+
+\title{Projeto de Banco de Dados para uma Locadora de Ve\'iculos:\\ Dicion\'ario de Dados, Modelagem Entidade-Relacionamento e Normaliza\c{c}\~ao}
+
+\author{
+\IEEEauthorblockN{Marcello Azevedo Pinheiro Siqueira\thanks{Grupo constitu\'ido por tr\^es integrantes mediante exce\c{c}\~ao autorizada pelo docente em raz\~ao do n\'umero de alunos da turma.}}
+\IEEEauthorblockA{Matr\'icula 24101166\\
+Engenharia de Software\\
+Instituto Brasileiro de Ensino,\\ Desenvolvimento e Pesquisa (IDP)\\
+Bras\'ilia, DF, Brasil}
+\and
+\IEEEauthorblockN{Lucas Basile}
+\IEEEauthorblockA{Matr\'icula 24101316\\
+Engenharia de Software\\
+Instituto Brasileiro de Ensino,\\ Desenvolvimento e Pesquisa (IDP)\\
+Bras\'ilia, DF, Brasil}
+\and
+\IEEEauthorblockN{Miguel Matos}
+\IEEEauthorblockA{Matr\'icula 24201146\\
+Engenharia de Software\\
+Instituto Brasileiro de Ensino,\\ Desenvolvimento e Pesquisa (IDP)\\
+Bras\'ilia, DF, Brasil}
+}
+
+\maketitle
+
+\begin{abstract}
+Este trabalho apresenta o projeto do banco de dados de uma locadora de ve\'iculos com atua\c{c}\~ao em m\'ultiplas filiais, desenvolvido como Laborat\'orio 01 da disciplina de Banco de Dados. O projeto cobre tr\^es etapas. A primeira \'e o levantamento das entidades do cen\'ario e a constru\c{c}\~ao do dicion\'ario de dados, com fichas de campos, chaves, relacionamentos, regras de neg\'ocio, dom\'inios controlados e \'indices. A segunda \'e a modelagem entidade-relacionamento, com sete entidades e cardinalidades 1:1, 1:N e N:N explicitadas. A terceira \'e a normaliza\c{c}\~ao, partindo de uma estrutura \'unica n\~ao normalizada e aplicando a Primeira, a Segunda e a Terceira Formas Normais, com justificativa t\'ecnica de cada decomposi\c{c}\~ao. O modelo final possui sete rela\c{c}\~oes em 3FN, atende \`as quatro restri\c{c}\~oes funcionais definidas no enunciado e serve de base para o script de cria\c{c}\~ao em MySQL 8.
+\end{abstract}
+
+\begin{IEEEkeywords}
+banco de dados, dicion\'ario de dados, modelo entidade-relacionamento, normaliza\c{c}\~ao, formas normais, MySQL
+\end{IEEEkeywords}

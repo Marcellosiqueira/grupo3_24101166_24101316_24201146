@@ -1,0 +1,50 @@
+\section{Resultados das Consultas}
+\label{sec:consultas}
+
+Esta se\c{c}\~ao re\'une o script de cria\c{c}\~ao do banco, a carga de dados e as consultas obrigat\'orias com os respectivos resultados de execu\c{c}\~ao no MySQL 8, correspondentes \`as Etapas 4 e 5 do laborat\'orio.
+
+\textit{Conte\'udo em elabora\c{c}\~ao. Esta vers\~ao do documento cobre as Etapas 1, 2 e 3. As capturas de tela das seis consultas ser\~ao inseridas nesta se\c{c}\~ao na vers\~ao 2.0, conforme o hist\'orico da Tabela \ref{tab:versoes}.}
+
+As consultas previstas s\~ao as seguintes.
+
+\begin{enumerate}
+\item Loca\c{c}\~oes em aberto, identificadas por \texttt{data\_real\_devolucao IS NULL}.
+\item Ve\'iculos dispon\'iveis agrupados por categoria.
+\item Cliente com maior n\'umero de loca\c{c}\~oes, com \texttt{COUNT} e \texttt{GROUP BY}.
+\item Faturamento total por filial, com \texttt{SUM}, \texttt{JOIN} e \texttt{GROUP BY}.
+\item Loca\c{c}\~oes com atraso na devolu\c{c}\~ao, por compara\c{c}\~ao entre \texttt{data\_prevista\_devolucao} e \texttt{data\_real\_devolucao}.
+\item Custo total de manuten\c{c}\~ao por ve\'iculo, a partir da tabela \texttt{manutencao}.
+\end{enumerate}
+
+\section{Experi\^encia dos Integrantes}
+
+\subsection{Marcello Azevedo Pinheiro Siqueira}
+Respons\'avel pelo levantamento das entidades a partir do cen\'ario, pela defini\c{c}\~ao das regras de neg\'ocio e pela constru\c{c}\~ao do dicion\'ario de dados, incluindo as fichas de campos, os dom\'inios controlados e os \'indices. Tamb\'em organizou o reposit\'orio do grupo e a estrutura deste documento. A maior dificuldade foi definir o n\'ivel de detalhe dos dom\'inios sem transformar o dicion\'ario em uma c\'opia do script SQL.
+
+\subsection{Lucas Basile}
+Respons\'avel pela modelagem entidade-relacionamento, pela defini\c{c}\~ao das cardinalidades e pela representa\c{c}\~ao dos dois relacionamentos independentes entre LOCACAO e FILIAL. Trabalhou tamb\'em a resolu\c{c}\~ao do relacionamento N:N entre cliente e ve\'iculo por meio da tabela associativa. A maior dificuldade foi decidir entre chave composta e chave substituta em LOCACAO, resolvida pela constata\c{c}\~ao de que o mesmo cliente pode alugar o mesmo ve\'iculo mais de uma vez.
+
+\subsection{Miguel Matos}
+Respons\'avel pela normaliza\c{c}\~ao, partindo da estrutura \'unica n\~ao normalizada e aplicando a 1FN, a 2FN e a 3FN, com o levantamento das depend\^encias funcionais e a justificativa de cada decomposi\c{c}\~ao. Analisou tamb\'em os atributos que aparentam redund\^ancia e permaneceram no modelo. A maior dificuldade foi distinguir atributo derivado de depend\^encia transitiva, j\'a que os dois produzem repeti\c{c}\~ao aparente de informa\c{c}\~ao.
+
+\section{Considera\c{c}\~oes Finais}
+
+O modelo final possui sete rela\c{c}\~oes em Terceira Forma Normal e atende aos quatro pontos exigidos pelo enunciado. As decis\~oes que mais influenciaram o resultado foram tr\^es. A primeira foi manter o valor da di\'aria na categoria e uma c\'opia contratada na loca\c{c}\~ao, o que preserva o hist\'orico de pre\c{c}os sem criar depend\^encia transitiva. A segunda foi usar duas chaves estrangeiras independentes para FILIAL, o que permite retirada e devolu\c{c}\~ao em unidades diferentes. A terceira foi adotar chave prim\'aria substituta em LOCACAO, o que permite que o mesmo par cliente e ve\'iculo se repita ao longo do tempo.
+
+O pr\'oximo passo \'e a implementa\c{c}\~ao do script de cria\c{c}\~ao no MySQL 8, a carga de ao menos cinco registros por tabela e a execu\c{c}\~ao das seis consultas previstas na Se\c{c}\~ao \ref{sec:consultas}.
+
+\begin{thebibliography}{9}
+
+\bibitem{elmasri} R. Elmasri e S. B. Navathe, \textit{Sistemas de Banco de Dados}, 7. ed. S\~ao Paulo: Pearson, 2019.
+
+\bibitem{date} C. J. Date, \textit{Introdu\c{c}\~ao a Sistemas de Bancos de Dados}, 8. ed. Rio de Janeiro: Elsevier, 2004.
+
+\bibitem{silberschatz} A. Silberschatz, H. F. Korth e S. Sudarshan, \textit{Sistema de Banco de Dados}, 7. ed. Rio de Janeiro: LTC, 2020.
+
+\bibitem{codd} E. F. Codd, ``A relational model of data for large shared data banks,'' \textit{Communications of the ACM}, vol. 13, n. 6, p. 377--387, 1970.
+
+\bibitem{mysql} Oracle Corporation, \textit{MySQL 8.4 Reference Manual}. [Online]. Dispon\'ivel: \url{https://dev.mysql.com/doc/refman/8.4/en/}
+
+\bibitem{lab} M. S. de Sousa, \textit{Laborat\'orio 01: Banco de Dados}. Bras\'ilia: Instituto Brasileiro de Ensino, Desenvolvimento e Pesquisa, 2026.
+
+\end{thebibliography}

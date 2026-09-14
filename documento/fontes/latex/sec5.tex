@@ -1,0 +1,187 @@
+\section{Normaliza\c{c}\~ao}
+\label{sec:normalizacao}
+
+Esta se\c{c}\~ao parte de uma estrutura \'unica n\~ao normalizada, equivalente \`a planilha que uma locadora pequena costuma manter antes de adotar um SGBD, e aplica a Primeira, a Segunda e a Terceira Formas Normais. Para cada etapa s\~ao apresentados o conjunto de tabelas resultante e a justificativa t\'ecnica da decis\~ao.
+
+Na nota\c{c}\~ao usada nesta se\c{c}\~ao, os atributos sublinhados formam a chave prim\'aria e os atributos marcados com asterisco s\~ao chaves estrangeiras.
+
+\subsection{Estrutura de partida (n\~ao normalizada)}
+
+A estrutura inicial concentra todos os dados em uma \'unica rela\c{c}\~ao.
+
+\vspace{2pt}
+\noindent\fbox{\parbox{0.955\columnwidth}{\footnotesize\ttfamily\raggedright
+LOCACAO\_GERAL(\underline{id\_locacao}, cliente\_nome, cliente\_cpf, cliente\_num\_cnh, cliente\_cat\_cnh, cliente\_validade\_cnh, cliente\_data\_nascimento, cliente\_telefone, cliente\_email, cliente\_endereco\_completo, cliente\_data\_cadastro, cliente\_status, veiculo\_placa, veiculo\_chassi, veiculo\_marca\_modelo, veiculo\_ano\_fabricacao, veiculo\_ano\_modelo, veiculo\_cor, veiculo\_combustivel, veiculo\_km\_atual, veiculo\_status, veiculo\_renavam, veiculo\_num\_crlv, veiculo\_ano\_licenciamento, veiculo\_venc\_licenciamento, veiculo\_apolice\_seguro, veiculo\_seguradora, categoria\_nome, categoria\_descricao, categoria\_valor\_diaria, categoria\_franquia\_km, categoria\_valor\_km\_excedente, filial\_ret\_nome, filial\_ret\_cnpj, filial\_ret\_endereco, filial\_ret\_telefone, filial\_dev\_nome, filial\_dev\_cnpj, filial\_dev\_endereco, filial\_dev\_telefone, data\_retirada, data\_prevista\_devolucao, data\_real\_devolucao, valor\_diaria\_contratada, km\_retirada, km\_devolucao, valor\_total, status\_locacao, manutencoes\_do\_veiculo)
+}}
+\vspace{4pt}
+
+\subsection{Anomalias e redund\^ancias identificadas}
+
+\subsubsection{Redund\^ancia}
+Os dados cadastrais do cliente (nome, CPF, CNH e endere\c{c}o) e os dados do ve\'iculo (placa, marca, modelo, RENAVAM e seguro) se repetem integralmente em cada linha de loca\c{c}\~ao. Um cliente com dez contratos tem o pr\'oprio nome armazenado dez vezes. O mesmo vale para o valor da di\'aria da categoria e para os dados das filiais.
+
+\subsubsection{Anomalia de inser\c{c}\~ao}
+N\~ao \'e poss\'ivel cadastrar um ve\'iculo rec\'em-adquirido, uma filial rec\'em-inaugurada ou uma nova categoria antes que exista uma loca\c{c}\~ao que os utilize, porque a chave prim\'aria da rela\c{c}\~ao \'e \texttt{id\_locacao}. O cadastro fica condicionado \`a ocorr\^encia de uma opera\c{c}\~ao comercial.
+
+\subsubsection{Anomalia de atualiza\c{c}\~ao}
+Um reajuste no valor da di\'aria da categoria SUV exige atualizar todas as linhas de loca\c{c}\~ao que envolvem ve\'iculos dessa categoria. Se a atualiza\c{c}\~ao falhar em parte das linhas, a base passa a informar dois valores diferentes para a mesma categoria. O mesmo risco se aplica \`a troca de endere\c{c}o de um cliente ou de uma filial.
+
+\subsubsection{Anomalia de exclus\~ao}
+A exclus\~ao da \'unica loca\c{c}\~ao de um cliente elimina junto todo o cadastro desse cliente, inclusive CPF e CNH. A exclus\~ao da \'unica loca\c{c}\~ao que utilizou um ve\'iculo elimina os dados do ve\'iculo e o seu hist\'orico de manuten\c{c}\~ao.
+
+\subsection{Primeira Forma Normal}
+
+Uma rela\c{c}\~ao est\'a em 1FN quando todos os seus atributos s\~ao at\^omicos e n\~ao existem grupos repetitivos. A estrutura de partida viola a 1FN em tr\^es pontos.
+
+\begin{itemize}
+\item \texttt{cliente\_endereco\_completo}, \texttt{filial\_ret\_endereco} e \texttt{filial\_dev\_endereco} s\~ao atributos compostos, com logradouro, cidade, UF e CEP em um \'unico campo texto. Consultar clientes por cidade exigiria fun\c{c}\~oes de string sobre o conte\'udo do campo.
+\item \texttt{veiculo\_marca\_modelo} concentra dois fatos distintos no mesmo campo.
+\item \texttt{manutencoes\_do\_veiculo} \'e um grupo repetitivo. Um ve\'iculo tem v\'arias manuten\c{c}\~oes e todas ficariam concatenadas na mesma c\'elula.
+\end{itemize}
+
+As duas primeiras viola\c{c}\~oes s\~ao resolvidas pela decomposi\c{c}\~ao dos atributos compostos em atributos at\^omicos. A terceira \'e resolvida pela extra\c{c}\~ao do grupo repetitivo para uma rela\c{c}\~ao pr\'opria, identificada pela combina\c{c}\~ao do ve\'iculo com a data de entrada na oficina.
+
+\vspace{2pt}
+\noindent\textbf{Conjunto resultante da 1FN:}
+\vspace{2pt}
+
+\noindent\fbox{\parbox{0.955\columnwidth}{\footnotesize\ttfamily\raggedright
+LOCACAO\_1FN(\underline{id\_locacao}, cliente\_nome, cliente\_cpf, cliente\_num\_cnh, cliente\_cat\_cnh, cliente\_validade\_cnh, cliente\_data\_nascimento, cliente\_telefone, cliente\_email, cliente\_logradouro, cliente\_cidade, cliente\_uf, cliente\_cep, cliente\_data\_cadastro, cliente\_status, veiculo\_placa, veiculo\_chassi, veiculo\_marca, veiculo\_modelo, veiculo\_ano\_fabricacao, veiculo\_ano\_modelo, veiculo\_cor, veiculo\_combustivel, veiculo\_km\_atual, veiculo\_status, veiculo\_renavam, veiculo\_num\_crlv, veiculo\_ano\_licenciamento, veiculo\_venc\_licenciamento, veiculo\_apolice\_seguro, veiculo\_seguradora, categoria\_nome, categoria\_descricao, categoria\_valor\_diaria, categoria\_franquia\_km, categoria\_valor\_km\_excedente, filial\_ret\_nome, filial\_ret\_cnpj, filial\_ret\_logradouro, filial\_ret\_cidade, filial\_ret\_uf, filial\_ret\_cep, filial\_ret\_telefone, filial\_dev\_nome, filial\_dev\_cnpj, filial\_dev\_logradouro, filial\_dev\_cidade, filial\_dev\_uf, filial\_dev\_cep, filial\_dev\_telefone, data\_retirada, data\_prevista\_devolucao, data\_real\_devolucao, valor\_diaria\_contratada, km\_retirada, km\_devolucao, valor\_total, status\_locacao)
+\vspace{4pt}
+
+MANUTENCAO\_1FN(\underline{veiculo\_placa}, \underline{data\_entrada}, veiculo\_marca, veiculo\_modelo, tipo, descricao, data\_saida, km\_manutencao, custo, fornecedor)
+}}
+\vspace{4pt}
+
+\subsection{Segunda Forma Normal}
+
+Uma rela\c{c}\~ao est\'a em 2FN quando est\'a em 1FN e todo atributo n\~ao-chave depende da chave prim\'aria inteira. A viola\c{c}\~ao s\'o pode ocorrer em rela\c{c}\~oes com chave prim\'aria composta.
+
+\subsubsection{An\'alise de LOCACAO\_1FN}
+A chave prim\'aria \'e \texttt{id\_locacao}, que \'e simples. Uma chave de atributo \'unico n\~ao admite depend\^encia parcial, porque n\~ao existe subconjunto pr\'oprio n\~ao vazio da chave. A rela\c{c}\~ao j\'a atende \`a 2FN e nenhuma altera\c{c}\~ao \'e necess\'aria nesta etapa.
+
+\subsubsection{An\'alise de MANUTENCAO\_1FN}
+A chave prim\'aria \'e composta por (\texttt{veiculo\_placa}, \texttt{data\_entrada}). As depend\^encias funcionais observadas s\~ao:
+
+{\raggedright
+\begin{itemize}
+\item \texttt{veiculo\_placa} $\rightarrow$ \texttt{veiculo\_marca}, \texttt{veiculo\_modelo}
+\item \texttt{veiculo\_placa}, \texttt{data\_entrada} $\rightarrow$ \texttt{tipo}, \texttt{descricao}, \texttt{data\_saida}, \texttt{km\_manutencao}, \texttt{custo}, \texttt{fornecedor}
+\end{itemize}
+\par}
+
+A marca e o modelo dependem apenas de \texttt{veiculo\_placa}, que \'e parte da chave e n\~ao a chave inteira. Essa \'e uma depend\^encia parcial e caracteriza viola\c{c}\~ao da 2FN. O efeito pr\'atico \'e que a marca e o modelo de um ve\'iculo ficam repetidos em cada manuten\c{c}\~ao registrada para ele.
+
+A decomposi\c{c}\~ao separa os atributos que dependem apenas de \texttt{veiculo\_placa} em uma rela\c{c}\~ao pr\'opria, mantendo \texttt{veiculo\_placa} como chave estrangeira na rela\c{c}\~ao de manuten\c{c}\~ao. A decomposi\c{c}\~ao \'e sem perda, porque o atributo comum \`as duas rela\c{c}\~oes resultantes \'e chave da rela\c{c}\~ao VEICULO\_2FN.
+
+\vspace{2pt}
+\noindent\textbf{Conjunto resultante da 2FN:}
+\vspace{2pt}
+
+\noindent\fbox{\parbox{0.955\columnwidth}{\footnotesize\ttfamily\raggedright
+LOCACAO\_2FN(\underline{id\_locacao}, cliente\_nome, cliente\_cpf, cliente\_num\_cnh, cliente\_cat\_cnh, cliente\_validade\_cnh, cliente\_data\_nascimento, cliente\_telefone, cliente\_email, cliente\_logradouro, cliente\_cidade, cliente\_uf, cliente\_cep, cliente\_data\_cadastro, cliente\_status, veiculo\_placa, veiculo\_chassi, veiculo\_marca, veiculo\_modelo, veiculo\_ano\_fabricacao, veiculo\_ano\_modelo, veiculo\_cor, veiculo\_combustivel, veiculo\_km\_atual, veiculo\_status, veiculo\_renavam, veiculo\_num\_crlv, veiculo\_ano\_licenciamento, veiculo\_venc\_licenciamento, veiculo\_apolice\_seguro, veiculo\_seguradora, categoria\_nome, categoria\_descricao, categoria\_valor\_diaria, categoria\_franquia\_km, categoria\_valor\_km\_excedente, filial\_ret\_nome, filial\_ret\_cnpj, filial\_ret\_logradouro, filial\_ret\_cidade, filial\_ret\_uf, filial\_ret\_cep, filial\_ret\_telefone, filial\_dev\_nome, filial\_dev\_cnpj, filial\_dev\_logradouro, filial\_dev\_cidade, filial\_dev\_uf, filial\_dev\_cep, filial\_dev\_telefone, data\_retirada, data\_prevista\_devolucao, data\_real\_devolucao, valor\_diaria\_contratada, km\_retirada, km\_devolucao, valor\_total, status\_locacao)
+\vspace{4pt}
+
+VEICULO\_2FN(\underline{veiculo\_placa}, veiculo\_marca, veiculo\_modelo)
+\vspace{4pt}
+
+MANUTENCAO\_2FN(\underline{veiculo\_placa*}, \underline{data\_entrada}, tipo, descricao, data\_saida, km\_manutencao, custo, fornecedor)
+}}
+\vspace{4pt}
+
+\subsection{Terceira Forma Normal}
+
+Uma rela\c{c}\~ao est\'a em 3FN quando est\'a em 2FN e nenhum atributo n\~ao-chave depende funcionalmente de outro atributo n\~ao-chave. A rela\c{c}\~ao LOCACAO\_2FN concentra todas as viola\c{c}\~oes restantes.
+
+\subsubsection{Depend\^encias transitivas identificadas}
+
+{\raggedright
+\begin{itemize}
+\item \texttt{id\_locacao} $\rightarrow$ \texttt{cliente\_cpf} $\rightarrow$ \texttt{cliente\_nome}, \texttt{cliente\_num\_cnh}, \texttt{cliente\_cat\_cnh}, \texttt{cliente\_validade\_cnh}, \texttt{cliente\_data\_nascimento}, \texttt{cliente\_telefone}, \texttt{cliente\_email}, \texttt{cliente\_logradouro}, \texttt{cliente\_cidade}, \texttt{cliente\_uf}, \texttt{cliente\_cep}, \texttt{cliente\_data\_cadastro}, \texttt{cliente\_status}
+\item \texttt{id\_locacao} $\rightarrow$ \texttt{veiculo\_placa} $\rightarrow$ \texttt{veiculo\_chassi}, \texttt{veiculo\_marca}, \texttt{veiculo\_modelo}, \texttt{veiculo\_ano\_fabricacao}, \texttt{veiculo\_ano\_modelo}, \texttt{veiculo\_cor}, \texttt{veiculo\_combustivel}, \texttt{veiculo\_km\_atual}, \texttt{veiculo\_status}, \texttt{veiculo\_renavam}, \texttt{veiculo\_num\_crlv}, \texttt{veiculo\_ano\_licenciamento}, \texttt{veiculo\_venc\_licenciamento}, \texttt{veiculo\_apolice\_seguro}, \texttt{veiculo\_seguradora}, \texttt{categoria\_nome}
+\item \texttt{veiculo\_placa} $\rightarrow$ \texttt{categoria\_nome} $\rightarrow$ \texttt{categoria\_descricao}, \texttt{categoria\_valor\_diaria}, \texttt{categoria\_franquia\_km}, \texttt{categoria\_valor\_km\_excedente}
+\item \texttt{id\_locacao} $\rightarrow$ \texttt{filial\_ret\_nome} $\rightarrow$ \texttt{filial\_ret\_cnpj}, \texttt{filial\_ret\_logradouro}, \texttt{filial\_ret\_cidade}, \texttt{filial\_ret\_uf}, \texttt{filial\_ret\_cep}, \texttt{filial\_ret\_telefone}
+\item \texttt{id\_locacao} $\rightarrow$ \texttt{filial\_dev\_nome} $\rightarrow$ \texttt{filial\_dev\_cnpj}, \texttt{filial\_dev\_logradouro}, \texttt{filial\_dev\_cidade}, \texttt{filial\_dev\_uf}, \texttt{filial\_dev\_cep}, \texttt{filial\_dev\_telefone}
+\end{itemize}
+\par}
+
+\subsubsection{Decomposi\c{c}\~oes realizadas}
+
+\paragraph{Extra\c{c}\~ao de CLIENTE} Os atributos cadastrais dependem de \texttt{cliente\_cpf} e n\~ao de \texttt{id\_locacao}. Eles foram movidos para a rela\c{c}\~ao CLIENTE. A justificativa \'e que o cadastro do cliente existe independentemente de qualquer contrato, o que elimina a anomalia de inser\c{c}\~ao e a anomalia de exclus\~ao descritas anteriormente.
+
+\paragraph{Extra\c{c}\~ao de FILIAL} Os dois blocos de atributos de filial dependem do nome da filial. Como retirada e devolu\c{c}\~ao referenciam o mesmo conjunto de unidades, os dois blocos foram unificados em uma \'unica rela\c{c}\~ao FILIAL, referenciada duas vezes por LOCACAO. Manter duas tabelas separadas duplicaria o cadastro da mesma unidade.
+
+\paragraph{Extra\c{c}\~ao de CATEGORIA} O valor da di\'aria depende da categoria e n\~ao do ve\'iculo nem da loca\c{c}\~ao. A extra\c{c}\~ao atende diretamente ao ponto do enunciado que exige que a categoria defina o valor da di\'aria, e faz com que um reajuste de pre\c{c}o seja uma \'unica atualiza\c{c}\~ao.
+
+\paragraph{Consolida\c{c}\~ao de VEICULO} Os atributos de ve\'iculo presentes em LOCACAO\_2FN foram consolidados com VEICULO\_2FN, produzida na etapa anterior. A rela\c{c}\~ao recebeu a chave estrangeira \texttt{id\_categoria} e a chave estrangeira \texttt{id\_filial}, referente \`a filial de lota\c{c}\~ao.
+
+\paragraph{Renomea\c{c}\~ao dos atributos} Com a separa\c{c}\~ao das rela\c{c}\~oes, os prefixos usados para desambiguar colunas na estrutura \'unica deixaram de ser necess\'arios. Os atributos \texttt{cliente\_nome}, \texttt{veiculo\_placa}, \texttt{filial\_ret\_cnpj} e equivalentes passaram a se chamar \texttt{nome}, \texttt{placa} e \texttt{cnpj} dentro das respectivas tabelas, e \texttt{status\_locacao} passou a \texttt{status} em LOCACAO. A renomea\c{c}\~ao n\~ao altera as depend\^encias funcionais.
+
+\paragraph{Substitui\c{c}\~ao das chaves naturais} As chaves naturais \texttt{cpf}, \texttt{placa} e \texttt{categoria\_nome} foram substitu\'idas por chaves prim\'arias substitutas inteiras com \texttt{AUTO\_INCREMENT}. Os atributos naturais permanecem nas tabelas com restri\c{c}\~ao \texttt{UNIQUE}, o que preserva a regra de unicidade sem propagar cadeias de caracteres longas para as tabelas filhas.
+
+\paragraph{Decomposi\c{c}\~ao vertical de DOCUMENTO\_VEICULO} Os atributos \texttt{renavam}, \texttt{num\_crlv}, \texttt{ano\_licenciamento}, \texttt{venc\_licenciamento}, \texttt{apolice\_seguro} e \texttt{seguradora} dependem funcionalmente de \texttt{id\_veiculo} e, portanto, j\'a estariam em 3FN dentro da rela\c{c}\~ao VEICULO. A separa\c{c}\~ao em uma rela\c{c}\~ao pr\'opria \'e uma decis\~ao de projeto e n\~ao uma exig\^encia de forma normal. Ela foi adotada por dois motivos: isolar dados regulat\'orios e de seguro, que t\^em ciclo de atualiza\c{c}\~ao anual e s\~ao consultados por rotinas distintas das rotinas de loca\c{c}\~ao, e evitar colunas opcionais na tabela central da frota, j\'a que ve\'iculos em processo de transfer\^encia podem ficar temporariamente sem ap\'olice. A decomposi\c{c}\~ao \'e sem perda, porque o atributo comum \texttt{id\_veiculo} \'e chave nas duas rela\c{c}\~oes.
+
+\subsubsection{Atributos mantidos e justificativa}
+
+Tr\^es atributos merecem justifica\c{c}\~ao expl\'icita porque aparentam redund\^ancia.
+
+\paragraph{\texttt{locacao.valor\_diaria\_contratada}} O valor cobrado \'e o valor vigente na data da assinatura do contrato. Ele n\~ao \'e determinado por \texttt{categoria.valor\_diaria}, que representa o pre\c{c}o atual e muda ao longo do tempo. Existe uma depend\^encia funcional direta \texttt{id\_locacao} $\rightarrow$ \texttt{valor\_diaria\_contratada}, sem intermedi\'ario, de modo que n\~ao h\'a depend\^encia transitiva. Retirar o campo faria um reajuste de pre\c{c}o alterar retroativamente contratos j\'a encerrados.
+
+\paragraph{\texttt{locacao.valor\_total}} \'E um atributo derivado, calculado no fechamento a partir do n\'umero de di\'arias, do valor da di\'aria contratada, do excedente de quilometragem e de eventual multa por atraso. Atributos derivados dependem funcionalmente da chave prim\'aria e por isso n\~ao violam a 3FN. A manuten\c{c}\~ao do campo \'e uma decis\~ao de desnormaliza\c{c}\~ao controlada, adotada para preservar o valor efetivamente faturado mesmo que as regras de c\'alculo mudem.
+
+\paragraph{\texttt{veiculo.km\_atual}} Poderia ser obtido a partir da \'ultima devolu\c{c}\~ao registrada. O campo foi mantido porque a quilometragem tamb\'em \'e atualizada em eventos fora do ciclo de loca\c{c}\~ao, como transfer\^encias entre filiais e retornos de manuten\c{c}\~ao, o que impede a deriva\c{c}\~ao exclusivamente a partir de LOCACAO.
+
+\vspace{2pt}
+\noindent\textbf{Conjunto resultante da 3FN (modelo final):}
+\vspace{2pt}
+
+\noindent\fbox{\parbox{0.955\columnwidth}{\footnotesize\ttfamily\raggedright
+CLIENTE(\underline{id\_cliente}, nome, cpf, num\_cnh, cat\_cnh, validade\_cnh, data\_nascimento, telefone, email, logradouro, cidade, uf, cep, data\_cadastro, status)
+\vspace{4pt}
+
+FILIAL(\underline{id\_filial}, nome, cnpj, logradouro, cidade, uf, cep, telefone)
+\vspace{4pt}
+
+CATEGORIA(\underline{id\_categoria}, nome, descricao, valor\_diaria, franquia\_km, valor\_km\_excedente)
+\vspace{4pt}
+
+VEICULO(\underline{id\_veiculo}, placa, chassi, marca, modelo, ano\_fabricacao, ano\_modelo, cor, combustivel, km\_atual, status, id\_categoria*, id\_filial*)
+\vspace{4pt}
+
+DOCUMENTO\_VEICULO(\underline{id\_veiculo*}, renavam, num\_crlv, ano\_licenciamento, venc\_licenciamento, apolice\_seguro, seguradora)
+\vspace{4pt}
+
+LOCACAO(\underline{id\_locacao}, id\_cliente*, id\_veiculo*, id\_filial\_retirada*, id\_filial\_devolucao*, data\_retirada, data\_prevista\_devolucao, data\_real\_devolucao, valor\_diaria\_contratada, km\_retirada, km\_devolucao, valor\_total, status)
+\vspace{4pt}
+
+MANUTENCAO(\underline{id\_manutencao}, id\_veiculo*, tipo, descricao, data\_entrada, data\_saida, km\_manutencao, custo, fornecedor)
+}}
+\vspace{4pt}
+
+\subsection{Verifica\c{c}\~ao do modelo final}
+
+As sete rela\c{c}\~oes atendem \`a 3FN. Em cada uma delas, todo atributo n\~ao-chave depende da chave prim\'aria inteira e de nenhum outro atributo n\~ao-chave.
+
+O modelo tamb\'em atende \`a Forma Normal de Boyce-Codd. Em todas as rela\c{c}\~oes, os \'unicos determinantes s\~ao a chave prim\'aria substituta e as chaves candidatas declaradas como \texttt{UNIQUE} (\texttt{cpf}, \texttt{num\_cnh}, \texttt{cnpj}, \texttt{placa}, \texttt{chassi}, \texttt{renavam} e \texttt{categoria.nome}). Como todo determinante \'e chave candidata, n\~ao h\'a viola\c{c}\~ao de BCNF. O campo \texttt{cliente.email} tamb\'em possui restri\c{c}\~ao \texttt{UNIQUE}, mas aceita valor nulo e por isso n\~ao \'e chave candidata, o que n\~ao afeta a an\'alise.
+
+A Tabela \ref{tab:evolucao} resume a evolu\c{c}\~ao do n\'umero de rela\c{c}\~oes ao longo do processo.
+
+\begin{table}[!h]
+\caption{Evolu\c{c}\~ao do modelo}
+\label{tab:evolucao}
+\centering
+\footnotesize
+\begin{tabular}{|L{1.9cm}|C{1.0cm}|L{4.2cm}|}
+\hline
+\textbf{Etapa} & \textbf{Rela\c{c}\~oes} & \textbf{Altera\c{c}\~ao aplicada} \\
+\hline
+N\~ao normalizada & 1 & Estrutura \'unica com grupo repetitivo e atributos compostos \\
+\hline
+1FN & 2 & Atomiza\c{c}\~ao de atributos compostos e extra\c{c}\~ao do grupo repetitivo de manuten\c{c}\~oes \\
+\hline
+2FN & 3 & Elimina\c{c}\~ao da depend\^encia parcial em MANUTENCAO\_1FN \\
+\hline
+3FN & 7 & Elimina\c{c}\~ao das depend\^encias transitivas e decomposi\c{c}\~ao vertical do bloco documental \\
+\hline
+\end{tabular}
+\end{table}

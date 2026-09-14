@@ -1,0 +1,35 @@
+digraph MER {
+  graph [rankdir=LR, bgcolor="white", fontname="Helvetica", nodesep=0.5, ranksep=1.1];
+  node  [fontname="Helvetica", fontsize=15];
+  edge  [fontname="Helvetica", fontsize=13, color="#33475b", penwidth=1.4];
+
+  CLIENTE  [shape=box, style="filled,rounded", fillcolor="#1F4E79", fontcolor="white", width=1.5, height=0.6];
+  VEICULO  [shape=box, style="filled,rounded", fillcolor="#1F4E79", fontcolor="white", width=1.5, height=0.6];
+  FILIAL   [shape=box, style="filled,rounded", fillcolor="#1F4E79", fontcolor="white", width=1.5, height=0.6];
+  CATEGORIA[shape=box, style="filled,rounded", fillcolor="#1F4E79", fontcolor="white", width=1.5, height=0.6];
+  DOCUMENTO[shape=box, style="filled,rounded", fillcolor="#1F4E79", fontcolor="white", width=1.8, height=0.6, label="DOCUMENTO\nDO VEÍCULO"];
+  MANUTENCAO[shape=box, style="filled,rounded", fillcolor="#1F4E79", fontcolor="white", width=1.5, height=0.6];
+
+  aluga    [shape=diamond, style=filled, fillcolor="#C55A11", fontcolor="white", label="ALUGA", height=0.9, width=1.6];
+  possui   [shape=diamond, style=filled, fillcolor="#C00000", fontcolor="white", label="possui", height=0.8, width=1.3];
+  classif  [shape=diamond, style=filled, fillcolor="#8FA9B8", label="classifica", height=0.8, width=1.5];
+  abriga   [shape=diamond, style=filled, fillcolor="#8FA9B8", label="abriga", height=0.8, width=1.3];
+  sofre    [shape=diamond, style=filled, fillcolor="#8FA9B8", label="sofre", height=0.8, width=1.3];
+
+  CLIENTE -> aluga    [dir=none, taillabel="N", labeldistance=1.8, penwidth=2.0];
+  aluga   -> VEICULO  [dir=none, headlabel="N", labeldistance=1.8, penwidth=2.0];
+  CATEGORIA -> classif [dir=none, taillabel="1", labeldistance=1.8];
+  classif -> VEICULO   [dir=none, headlabel="N", labeldistance=1.8];
+  FILIAL  -> abriga    [dir=none, taillabel="1", labeldistance=1.8];
+  abriga  -> VEICULO   [dir=none, headlabel="N", labeldistance=1.8];
+  VEICULO -> possui    [dir=none, taillabel="1", labeldistance=1.8, color="#C00000", penwidth=1.8];
+  possui  -> DOCUMENTO [dir=none, headlabel="1", labeldistance=1.8, color="#C00000", penwidth=1.8];
+  VEICULO -> sofre     [dir=none, taillabel="1", labeldistance=1.8];
+  sofre   -> MANUTENCAO[dir=none, headlabel="N", labeldistance=1.8];
+  FILIAL  -> aluga [dir=none, taillabel="1", headlabel="N", labeldistance=2.2, style=dashed, label="retirada", fontsize=11];
+  FILIAL  -> aluga [dir=none, taillabel="1", headlabel="N", labeldistance=2.2, style=dotted, label="devolução", fontsize=11];
+
+
+  { rank=same; CLIENTE; CATEGORIA; FILIAL; }
+  { rank=same; DOCUMENTO; MANUTENCAO; }
+}
