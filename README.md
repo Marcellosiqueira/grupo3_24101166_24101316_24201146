@@ -28,7 +28,8 @@ der/
   *.dot                       fontes dos diagramas (Graphviz)
 sql/
   Laboratorio01_Grupo3.sql    Etapas 4 e 5: criação do banco, carga de dados e consultas
-  LEIAME.md                   como executar o script
+  aula14_views_indices.sql    Aula 14: views, view materializada e índice composto
+  LEIAME.md                   como executar os scripts
 ```
 
 Ao editar o `.docx`, reexportar o `.pdf` para que os dois fiquem iguais.
@@ -47,6 +48,8 @@ Ao editar o `.docx`, reexportar o `.pdf` para que os dois fiquem iguais.
 
 Sete entidades: `cliente`, `filial`, `categoria`, `veiculo`, `documento_veiculo`, `locacao` e `manutencao`.
 SGBD: MySQL 8.
+
+Carga de dados: 5 categorias, 5 filiais, 6 clientes, 30 veículos (6 por categoria), 30 documentos, 17 locações e 9 manutenções.
 
 ## Prazo
 

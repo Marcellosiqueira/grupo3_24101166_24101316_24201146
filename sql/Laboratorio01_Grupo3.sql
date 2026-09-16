@@ -225,6 +225,75 @@ INSERT INTO manutencao (id_manutencao, id_veiculo, tipo, descricao, data_entrada
 (7, 3, 'CORRETIVA',  'Troca de bateria e do alternador',                  '2026-09-15', NULL,         15700, 1720.00, 'Auto Center Guara');
 
 -- ---------------------------------------------------------------------
+-- Ampliacao da frota: dos 8 veiculos iniciais para 30
+-- ---------------------------------------------------------------------
+-- A frota tem 30 veiculos, 6 em cada uma das 5 categorias, com status variados.
+-- Para manter a coerencia dos dados: todo veiculo LOCADO recebe uma
+-- locacao ABERTA, todo veiculo em MANUTENCAO recebe uma manutencao sem
+-- data de saida, e todos recebem o documento (relacao 1:1).
+
+INSERT INTO veiculo (id_veiculo, placa, chassi, marca, modelo, ano_fabricacao, ano_modelo, cor, combustivel, km_atual, status, id_categoria, id_filial) VALUES
+-- ECONOMICO
+( 9, 'QAB1C23', '9BWAA05U0EP000109', 'Volkswagen',    'Polo Track',    2024, 2025, 'Branco',   'FLEX',     8200,  'DISPONIVEL', 1, 3),
+(10, 'QAC2D34', '9BGEA48A0PG000110', 'Chevrolet',     'Onix',          2023, 2024, 'Prata',    'FLEX',     21400, 'LOCADO',     1, 1),
+(11, 'QAD3E45', '9BFZH55L0R8000111', 'Ford',          'Ka',            2021, 2021, 'Azul',     'FLEX',     48700, 'INATIVO',    1, 2),
+-- INTERMEDIARIO
+(12, 'QAE4F56', '9BWDB45U0PT000112', 'Volkswagen',    'Virtus',        2024, 2024, 'Cinza',    'FLEX',     11800, 'DISPONIVEL', 2, 1),
+(13, 'QAF5G67', '9BD35812XRY000113', 'Fiat',          'Cronos',        2023, 2024, 'Branco',   'FLEX',     19600, 'LOCADO',     2, 2),
+(14, 'QAG6H78', '93HGR3860RZ000114', 'Honda',         'City',          2024, 2025, 'Preto',    'FLEX',     7300,  'DISPONIVEL', 2, 5),
+(15, 'QAH7J89', '9BHCN41BAR0000115', 'Hyundai',       'HB20S',         2023, 2023, 'Prata',    'FLEX',     25100, 'DISPONIVEL', 2, 4),
+(16, 'QAJ8K90', '9BRBD48E0R4000116', 'Toyota',        'Yaris Sedan',   2022, 2023, 'Vermelho', 'FLEX',     33900, 'MANUTENCAO', 2, 3),
+-- SUV
+(17, 'QAK9L01', '9BWBH6BF0R4000117', 'Volkswagen',    'T-Cross',       2024, 2025, 'Branco',   'FLEX',     9400,  'LOCADO',     3, 1),
+(18, 'QAL0M12', '9BHBG41DAR0000118', 'Hyundai',       'Creta',         2023, 2024, 'Cinza',    'FLEX',     22800, 'DISPONIVEL', 3, 3),
+(19, 'QAM1N23', '93YHSR2F5RJ000119', 'Renault',       'Duster',        2022, 2022, 'Marrom',   'FLEX',     41200, 'DISPONIVEL', 3, 4),
+(20, 'QAN2P34', '9BGEP76K0RB000120', 'Chevrolet',     'Tracker',       2024, 2024, 'Azul',     'FLEX',     14500, 'DISPONIVEL', 3, 5),
+-- LUXO
+(21, 'QAP3Q45', 'WDD2050421F000121', 'Mercedes-Benz', 'C 200',         2024, 2025, 'Preto',    'GASOLINA', 6100,  'DISPONIVEL', 4, 1),
+(22, 'QAQ4R56', 'WAUZZZF40RA000122', 'Audi',          'A4',            2023, 2024, 'Branco',   'GASOLINA', 15800, 'LOCADO',     4, 5),
+(23, 'QAR5S67', 'YV1ZWA8U0R1000123', 'Volvo',         'XC40 Recharge', 2024, 2024, 'Cinza',    'ELETRICO', 8900,  'DISPONIVEL', 4, 2),
+(24, 'QAS6T78', 'JTHBA1D20R5000124', 'Lexus',         'ES 300h',       2023, 2023, 'Prata',    'HIBRIDO',  19700, 'MANUTENCAO', 4, 5),
+(25, 'QAT7U89', 'WBA7U2100RG000125', 'BMW',           'X1',            2022, 2023, 'Azul',     'GASOLINA', 36400, 'INATIVO',    4, 1),
+-- UTILITARIO
+(26, 'QAU8V90', '93ZC3580R80000126', 'Iveco',         'Daily',         2023, 2023, 'Branco',   'DIESEL',   42300, 'DISPONIVEL', 5, 3),
+(27, 'QAV9W01', 'WF0XXXTTGXR000127', 'Ford',          'Transit',       2024, 2024, 'Branco',   'DIESEL',   12600, 'LOCADO',     5, 4),
+(28, 'QAW0X12', '9BD2651JHR9000128', 'Fiat',          'Strada',        2024, 2025, 'Vermelho', 'FLEX',     10300, 'DISPONIVEL', 5, 2),
+(29, 'QAX1Y23', '8AC906635RE000129', 'Mercedes-Benz', 'Sprinter',      2022, 2023, 'Branco',   'DIESEL',   58800, 'DISPONIVEL', 5, 1),
+(30, 'QAY2Z34', '9BD5781DAR8000130', 'Fiat',          'Ducato',        2023, 2024, 'Prata',    'DIESEL',   27400, 'DISPONIVEL', 5, 5);
+
+-- Documento de cada veiculo novo, seguindo a numeracao da carga original.
+-- Veiculo INATIVO fica sem apolice de seguro.
+INSERT INTO documento_veiculo (id_veiculo, renavam, num_crlv, ano_licenciamento, venc_licenciamento, apolice_seguro, seguradora)
+SELECT v.id_veiculo,
+       CONCAT('100000000', LPAD(v.id_veiculo, 2, '0')),
+       CONCAT('CRLV2026', LPAD(7411 + v.id_veiculo, 6, '0')),
+       2026,
+       '2026-12-31',
+       IF(v.status = 'INATIVO', NULL, CONCAT('AP-2026-', 55411 + v.id_veiculo)),
+       CASE WHEN v.status = 'INATIVO'    THEN NULL
+            WHEN v.id_veiculo % 3 = 0    THEN 'Porto Seguro'
+            WHEN v.id_veiculo % 3 = 1    THEN 'Allianz'
+            ELSE 'Bradesco Seguros' END
+FROM veiculo v
+WHERE v.id_veiculo BETWEEN 9 AND 30
+  AND NOT EXISTS (SELECT 1 FROM documento_veiculo d WHERE d.id_veiculo = v.id_veiculo);
+
+-- Locacoes em aberto dos veiculos novos com status LOCADO.
+-- km_retirada igual ao km_atual, porque o veiculo ainda nao voltou.
+INSERT INTO locacao (id_locacao, id_cliente, id_veiculo, id_filial_retirada, id_filial_devolucao, data_retirada, data_prevista_devolucao, data_real_devolucao, valor_diaria_contratada, km_retirada, km_devolucao, valor_total, status) VALUES
+(13, 1, 10, 1, 1, '2026-09-10 09:00:00', '2026-09-17 09:00:00', NULL, 129.90, 21400, NULL, NULL, 'ABERTA'),
+(14, 3, 13, 2, 2, '2026-09-11 10:00:00', '2026-09-18 10:00:00', NULL, 189.90, 19600, NULL, NULL, 'ABERTA'),
+(15, 4, 17, 1, 4, '2026-09-13 08:30:00', '2026-09-20 08:30:00', NULL, 289.90,  9400, NULL, NULL, 'ABERTA'),
+(16, 5, 22, 5, 1, '2026-09-15 14:00:00', '2026-09-18 14:00:00', NULL, 549.90, 15800, NULL, NULL, 'ABERTA'),
+(17, 6, 27, 4, 4, '2026-09-15 07:00:00', '2026-09-22 07:00:00', NULL, 219.90, 12600, NULL, NULL, 'ABERTA');
+
+-- Manutencoes em aberto dos veiculos novos com status MANUTENCAO.
+INSERT INTO manutencao (id_manutencao, id_veiculo, tipo, descricao, data_entrada, data_saida, km_manutencao, custo, fornecedor) VALUES
+(8, 16, 'CORRETIVA', 'Troca do kit de embreagem',   '2026-09-14', NULL, 33900, 2150.00, 'Auto Center Guara'),
+(9, 24, 'REVISAO',   'Revisao do sistema hibrido',  '2026-09-15', NULL, 19700, 1980.00, 'Concessionaria Lexus Brasilia');
+
+
+-- ---------------------------------------------------------------------
 -- 2. CONSULTAS OBRIGATORIAS
 -- ---------------------------------------------------------------------
 
