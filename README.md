@@ -27,8 +27,8 @@ der/
   der_logico.png/.pdf         modelo lógico, com PK, FK e restrições de unicidade
   *.dot                       fontes dos diagramas (Graphviz)
 sql/
-  01_criacao.sql              Etapa 4, criação do banco (pendente)
-  02_insercao_consultas.sql   Etapa 5, carga de dados e consultas (pendente)
+  Laboratorio01_Grupo3.sql    Etapas 4 e 5: criação do banco, carga de dados e consultas
+  LEIAME.md                   como executar o script
 ```
 
 Ao editar o `.docx`, reexportar o `.pdf` para que os dois fiquem iguais.
@@ -40,8 +40,8 @@ Ao editar o `.docx`, reexportar o `.pdf` para que os dois fiquem iguais.
 | 1 | Levantamento e dicionário de dados | Concluída |
 | 2 | Modelagem MER/DER | Concluída |
 | 3 | Normalização 1FN, 2FN e 3FN | Concluída |
-| 4 | Criação do banco (script SQL) | Pendente |
-| 5 | Inserção e consultas SQL | Pendente |
+| 4 | Criação do banco (script SQL) | Concluída |
+| 5 | Inserção e consultas SQL | Concluída |
 
 ## Modelo
 
