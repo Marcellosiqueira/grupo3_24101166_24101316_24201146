@@ -155,7 +155,7 @@ SELECT * FROM mv_faturamento_veiculo ORDER BY faturamento DESC;
 -- id_cliente entra com igualdade e reduz a busca a um cliente; dentro dele,
 -- data_retirada ja esta ordenada e o intervalo >= e lido em sequencia.
 --
--- Com 12 linhas em locacao o otimizador prefere table scan mesmo com
+-- Com 17 linhas em locacao o otimizador prefere table scan mesmo com
 -- indice, e o EXPLAIN nao mostra ganho. Por isso a medicao e feita em
 -- locacao_teste: mesma estrutura de locacao, sem FK e sem indices
 -- secundarios, com 200 mil linhas geradas.
