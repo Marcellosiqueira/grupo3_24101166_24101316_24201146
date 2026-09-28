@@ -27,14 +27,16 @@ der/
   der_logico.png/.pdf         modelo lógico, com PK, FK e restrições de unicidade
   *.dot                       fontes dos diagramas (Graphviz)
 sql/
-  Laboratorio01_Grupo3.sql    Etapas 4 e 5: criação do banco, carga de dados e consultas
+  Laboratorio01_Grupo3.sql    Parte 1, Etapas 4 e 5: criação do banco, carga de dados e consultas
+  script_parte2.sql           Parte 2: views, índices, triggers, procedure e function
+  evidencias_explain.sql      Parte 2: EXPLAIN antes e depois dos índices (não faz parte da entrega executável)
   aula14_views_indices.sql    Aula 14: views, view materializada e índice composto
   LEIAME.md                   como executar os scripts
 ```
 
 Ao editar o `.docx`, reexportar o `.pdf` para que os dois fiquem iguais.
 
-## Situação das etapas
+## Situação das etapas, Parte 1
 
 | Etapa | Descrição | Situação |
 | --- | --- | --- |
@@ -44,13 +46,25 @@ Ao editar o `.docx`, reexportar o `.pdf` para que os dois fiquem iguais.
 | 4 | Criação do banco (script SQL) | Concluída |
 | 5 | Inserção e consultas SQL | Concluída |
 
+## Situação das etapas, Parte 2
+
+| Parte | Descrição | Situação |
+| --- | --- | --- |
+| 1 | Views e índices | Concluída |
+| 2 | Triggers, procedure e function | Concluída |
+| 3 | Controle de concorrência | Pendente, exige duas sessões simultâneas |
+| Relatório | Relatório de evidências | Pendente |
+
 ## Modelo
 
 Sete entidades: `cliente`, `filial`, `categoria`, `veiculo`, `documento_veiculo`, `locacao` e `manutencao`.
-SGBD: MySQL 8.
+SGBD: MySQL 8, testado no 8.0.46.
 
 Carga de dados: 5 categorias, 5 filiais, 6 clientes, 30 veículos (6 por categoria), 30 documentos, 17 locações e 9 manutenções.
 
-## Prazo
+Objetos criados pela Parte 2: as views `vw_locacoes_ativas`, `vw_veiculos_disponiveis` e `vw_faturamento_mensal`; o índice `idx_locacao_data_retirada`; a tabela de auditoria `log_locacao`; os triggers `trg_locacao_ai_status`, `trg_locacao_au_status` e `trg_locacao_au_auditoria`; a procedure `sp_abrir_locacao`; e a função `fn_calcula_multa`.
 
-Entrega até 16/09/2026, às 23h59, neste repositório.
+## Prazos
+
+Parte 1: entrega até 16/09/2026, às 23h59, neste repositório.
+Parte 2: entrega em 28/09/2026, neste repositório.
