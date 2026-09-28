@@ -12,12 +12,17 @@ USE locadora;
 -- ---------------------------------------------------------------------
 -- SECAO 1. View atualizavel (slides 9 e 14)
 -- ---------------------------------------------------------------------
+-- Renomeada de vw_veiculos_disponiveis para vw_veiculos_disponiveis_simples
+-- porque o roteiro do Laboratorio 01 Parte 2 exige o nome vw_veiculos_disponiveis
+-- para uma view com JOIN. Esta continua sendo a view de uma tabela so, que e
+-- o objeto de estudo desta secao.
+--
 -- Uma unica tabela, sem JOIN, sem agregacao e com a PK id_veiculo: o MySQL
 -- consegue mapear cada linha da view para uma linha de veiculo, entao a
 -- view aceita UPDATE. WITH CHECK OPTION recusa qualquer alteracao feita
 -- pela view que deixaria a linha fora do filtro status = 'DISPONIVEL'.
 
-CREATE OR REPLACE VIEW vw_veiculos_disponiveis AS
+CREATE OR REPLACE VIEW vw_veiculos_disponiveis_simples AS
 SELECT v.id_veiculo,
        v.placa,
        v.marca,
@@ -32,12 +37,12 @@ WHERE v.status = 'DISPONIVEL'
 WITH CHECK OPTION;
 
 -- UPDATE que passa (a linha continua DISPONIVEL e a tabela veiculo e alterada):
---   UPDATE vw_veiculos_disponiveis SET km_atual = 13500 WHERE id_veiculo = 2;
+--   UPDATE vw_veiculos_disponiveis_simples SET km_atual = 13500 WHERE id_veiculo = 2;
 --   Query OK, 1 row affected
 --
 -- UPDATE que o WITH CHECK OPTION bloqueia (a linha sairia do filtro):
---   UPDATE vw_veiculos_disponiveis SET status = 'MANUTENCAO' WHERE id_veiculo = 2;
---   ERROR 1369 (HY000): CHECK OPTION failed 'locadora.vw_veiculos_disponiveis'
+--   UPDATE vw_veiculos_disponiveis_simples SET status = 'MANUTENCAO' WHERE id_veiculo = 2;
+--   ERROR 1369 (HY000): CHECK OPTION failed 'locadora.vw_veiculos_disponiveis_simples'
 --
 -- Os dois comandos ficam so em comentario para o script nao alterar a carga
 -- do laboratorio nem parar no erro.
@@ -46,10 +51,26 @@ WITH CHECK OPTION;
 -- ---------------------------------------------------------------------
 -- SECAO 2. View com JOIN (slide 10)
 -- ---------------------------------------------------------------------
--- Locacoes em aberto. Por ter JOIN, nao e atualizavel de forma geral; serve
--- para simplificar uma consulta usada com frequencia.
+-- Locacoes em aberto. Serve para simplificar uma consulta usada com frequencia.
+--
+-- Medido no MySQL 8.0.46: ao contrario do que se costuma afirmar, uma view com
+-- JOIN e atualizavel. Esta aparece com IS_UPDATABLE = YES em
+-- information_schema.VIEWS e o UPDATE abaixo funciona, inclusive alterando
+-- coluna de tabela que nao e a primeira do FROM:
+--   UPDATE vw_locacoes_ativas_join SET data_prevista_devolucao = '2026-09-18 09:00:00'
+--    WHERE id_locacao = 13;
+--   Query OK, 1 row affected
+-- O que o JOIN impede e o DELETE:
+--   DELETE FROM vw_locacoes_ativas_join WHERE id_locacao = 13;
+--   ERROR 1395 (HY000): Can not delete from join view 'locadora.vw_locacoes_ativas_join'
+-- O INSERT tambem falha, mas por outro motivo: as colunas NOT NULL sem DEFAULT
+-- das tabelas base nao estao na lista de selecao (erro 1423).
+--
+-- Renomeada de vw_locacoes_ativas para vw_locacoes_ativas_join: o roteiro do
+-- Laboratorio 01 Parte 2 exige o nome vw_locacoes_ativas para uma view com
+-- outro conjunto de colunas e outro filtro. As duas coexistem.
 
-CREATE OR REPLACE VIEW vw_locacoes_ativas AS
+CREATE OR REPLACE VIEW vw_locacoes_ativas_join AS
 SELECT l.id_locacao,
        c.nome                     AS cliente,
        v.placa                    AS placa,
