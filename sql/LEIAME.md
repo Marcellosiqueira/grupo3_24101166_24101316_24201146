@@ -21,6 +21,12 @@ O script recria o banco do zero a cada execução.
 - Parte 2, tabela `log_locacao` e três triggers: `trg_locacao_ai_status` (veículo passa a LOCADO na abertura), `trg_locacao_au_status` (veículo volta a DISPONIVEL e `km_atual` é atualizado na devolução) e `trg_locacao_au_auditoria` (registra mudança de `valor_total` e de `status`);
 - Parte 2, procedure `sp_abrir_locacao` e função `fn_calcula_multa`.
 
+A `sp_abrir_locacao` valida o status do veículo com um `SELECT` sem trava e, sob concorrência, permite abrir duas locações para o mesmo veículo. Isso é conhecido e foi mantido de propósito: a demonstração da falha e a versão corrigida estão em `parte3_concorrencia.sql` e na Seção 7.5 do relatório de evidências.
+
+`parte3_concorrencia.sql` é o roteiro de execução da Parte 3. Não roda de uma vez: cada comando indica a sessão responsável e o passo, e é executado alternando entre duas conexões simultâneas, com uma terceira como monitor. Define também a `sp_abrir_locacao_seguro`, versão de `sp_abrir_locacao` com `SELECT ... FOR UPDATE`, que corrige a condição de corrida demonstrada no Cenário 3.
+
+Antes de começar, rode `SET SESSION innodb_lock_wait_timeout = 300;` em cada uma das três sessões. O padrão é 50 segundos e não basta para quem alterna entre janelas com uma sessão bloqueada.
+
 `evidencias_explain.sql` **não** faz parte da entrega executável. Ele derruba os três índices, roda `EXPLAIN` nas três consultas, recria os índices e roda `EXPLAIN` de novo, só para gerar os prints do relatório. Como `idx_veiculo_categoria` sustenta a chave estrangeira `fk_veiculo_categoria`, o script derruba e recria essa FK junto (sem isso, o MySQL retorna erro 1553).
 
 ### Resultado medido dos EXPLAIN
@@ -52,5 +58,7 @@ docker exec -i mysql-locadora mysql -uroot -proot           < sql/Laboratorio01_
 docker exec -i mysql-locadora mysql -uroot -proot locadora  < sql/aula14_views_indices.sql
 docker exec -i mysql-locadora mysql -uroot -proot locadora  < sql/script_parte2.sql
 ```
+
+`parte3_concorrencia.sql` roda de forma interativa, em três conexões, e não por redirecionamento.
 
 `evidencias_explain.sql` roda por último, e só quando se quer tirar os prints.

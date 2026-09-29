@@ -19,6 +19,7 @@ Grupo de três integrantes por exceção autorizada pelo docente, em razão do n
 documento/
   Laboratorio01_Grupo3.docx   documento único em formato IEEE, arquivo mestre editável
   Laboratorio01_Grupo3.pdf    exportação do .docx, versão entregue
+  relatorio_evidencias.pdf    Parte 2: relatório de evidências (EXPLAIN, triggers, concorrência)
   fontes/latex/               fontes LaTeX (IEEEtran) do mesmo documento
   fontes/docx/                gerador do .docx
   fontes/modelo.py            esquemas das relações usados pelos dois geradores
@@ -29,6 +30,7 @@ der/
 sql/
   Laboratorio01_Grupo3.sql    Parte 1, Etapas 4 e 5: criação do banco, carga de dados e consultas
   script_parte2.sql           Parte 2: views, índices, triggers, procedure e function
+  parte3_concorrencia.sql     Parte 3: roteiro de concorrência em duas sessões simultâneas
   evidencias_explain.sql      Parte 2: EXPLAIN antes e depois dos índices (não faz parte da entrega executável)
   aula14_views_indices.sql    Aula 14: views, view materializada e índice composto
   LEIAME.md                   como executar os scripts
@@ -52,8 +54,8 @@ Ao editar o `.docx`, reexportar o `.pdf` para que os dois fiquem iguais.
 | --- | --- | --- |
 | 1 | Views e índices | Concluída |
 | 2 | Triggers, procedure e function | Concluída |
-| 3 | Controle de concorrência | Pendente, exige duas sessões simultâneas |
-| Relatório | Relatório de evidências | Pendente |
+| 3 | Controle de concorrência | Concluída |
+| Relatório | Relatório de evidências | Concluído |
 
 ## Modelo
 
@@ -61,6 +63,8 @@ Sete entidades: `cliente`, `filial`, `categoria`, `veiculo`, `documento_veiculo`
 SGBD: MySQL 8, testado no 8.0.46.
 
 Carga de dados: 5 categorias, 5 filiais, 6 clientes, 30 veículos (6 por categoria), 30 documentos, 17 locações e 9 manutenções.
+
+Os dois entregáveis exigidos pelo roteiro são `sql/script_parte2.sql` e `documento/relatorio_evidencias.pdf`. O `sql/parte3_concorrencia.sql` é o roteiro de execução da Parte 3, que o relatório usa como fonte.
 
 Objetos criados pela Parte 2: as views `vw_locacoes_ativas`, `vw_veiculos_disponiveis` e `vw_faturamento_mensal`; o índice `idx_locacao_data_retirada`; a tabela de auditoria `log_locacao`; os triggers `trg_locacao_ai_status`, `trg_locacao_au_status` e `trg_locacao_au_auditoria`; a procedure `sp_abrir_locacao`; e a função `fn_calcula_multa`.
 
