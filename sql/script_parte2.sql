@@ -192,6 +192,14 @@ DELIMITER $$
 --    nasce nulo, e a consulta de faturamento depende disso. A procedure
 --    calcula o valor previsto e devolve em p_valor_previsto, mas grava
 --    valor_total como NULL. O valor efetivo entra na devolucao.
+--
+-- LIMITACAO CONHECIDA, mantida de proposito: a leitura do status e um
+-- SELECT comum, sem trava, entao existe uma janela entre a validacao e o
+-- INSERT. Sob concorrencia, duas sessoes conseguem abrir locacao para o
+-- mesmo veiculo. A demonstracao da falha e a versao corrigida com
+-- FOR UPDATE estao em sql/parte3_concorrencia.sql (Cenarios 3 e 4) e na
+-- Secao 7.5 do relatorio de evidencias. Esta versao fica aqui como
+-- contraexemplo.
 CREATE PROCEDURE sp_abrir_locacao (
     IN  p_id_cliente     INT,
     IN  p_id_veiculo     INT,
