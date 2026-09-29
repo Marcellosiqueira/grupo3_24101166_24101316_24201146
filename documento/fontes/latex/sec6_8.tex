@@ -3,48 +3,167 @@
 
 Esta se\c{c}\~ao re\'une o script de cria\c{c}\~ao do banco, a carga de dados e as consultas obrigat\'orias com os respectivos resultados de execu\c{c}\~ao no MySQL 8, correspondentes \`as Etapas 4 e 5 do laborat\'orio.
 
-\textit{Conte\'udo em elabora\c{c}\~ao. Esta vers\~ao do documento cobre as Etapas 1, 2 e 3. As capturas de tela das seis consultas ser\~ao inseridas nesta se\c{c}\~ao na vers\~ao 2.0, conforme o hist\'orico da Tabela \ref{tab:versoes}.}
+\subsection{Script de cria\c{c}\~ao e carga}
 
-As consultas previstas s\~ao as seguintes.
+O script \texttt{Laboratorio01\_Grupo3.sql}, dispon\'{i}vel no reposit\'orio do grupo, recria o banco \texttt{locadora} do zero e \'e autossuficiente. Ele cria as sete tabelas do modelo l\'ogico no motor InnoDB, com conjunto de caracteres \texttt{utf8mb4}, somando 7 chaves prim\'arias, 8 chaves estrangeiras, 8 restri\c{c}\~oes de unicidade e 21 restri\c{c}\~oes \texttt{CHECK}. As restri\c{c}\~oes \texttt{CHECK} implementam os dom\'{i}nios controlados definidos na Se\c{c}\~ao~\ref{sec:dicionario}, como o conjunto fechado de valores de \texttt{status} e a exig\^encia de quilometragem n\~ao negativa, de modo que a regra fica no banco e n\~ao depende da aplica\c{c}\~ao.
 
-\begin{enumerate}
-\item Loca\c{c}\~oes em aberto, identificadas por \texttt{data\_real\_devolucao IS NULL}.
-\item Ve\'iculos dispon\'iveis agrupados por categoria.
-\item Cliente com maior n\'umero de loca\c{c}\~oes, com \texttt{COUNT} e \texttt{GROUP BY}.
-\item Faturamento total por filial, com \texttt{SUM}, \texttt{JOIN} e \texttt{GROUP BY}.
-\item Loca\c{c}\~oes com atraso na devolu\c{c}\~ao, por compara\c{c}\~ao entre \texttt{data\_prevista\_devolucao} e \texttt{data\_real\_devolucao}.
-\item Custo total de manuten\c{c}\~ao por ve\'iculo, a partir da tabela \texttt{manutencao}.
-\end{enumerate}
+A carga insere 5 categorias, 5 filiais, 6 clientes, 30 ve\'{i}culos distribu\'{i}dos em 6 por categoria, 30 registros documentais, 17 loca\c{c}\~oes e 9 manuten\c{c}\~oes, acima do m\'{i}nimo de cinco registros por tabela exigido pelo enunciado. Os dados foram constru\'{i}dos para que as seis consultas devolvam resultados n\~ao vazios e coerentes entre si: nenhum ve\'{i}culo possui duas loca\c{c}\~oes sobrepostas no tempo, a quilometragem cresce de forma monot\^onica ao longo das loca\c{c}\~oes de um mesmo ve\'{i}culo, o \texttt{status} de cada ve\'{i}culo corresponde \`as loca\c{c}\~oes em aberto e \`as manuten\c{c}\~oes em andamento, e o \texttt{valor\_total} de cada contrato encerrado equivale ao n\'umero de di\'arias multiplicado pela di\'aria contratada.
+
+\subsection{Consultas obrigat\'orias}
+
+As seis consultas e os respectivos resultados de execu\c{c}\~ao s\~ao apresentados a seguir. O ambiente \'e o MySQL 8.0.46 com o \texttt{sql\_mode} padr\~ao da instala\c{c}\~ao, que inclui \texttt{ONLY\_FULL\_GROUP\_BY} e, portanto, exige que toda coluna n\~ao agregada apare\c{c}a na cl\'ausula \texttt{GROUP BY}.
+
+\subsubsection{Loca\c{c}\~oes em aberto}
+Identifica os contratos ainda n\~ao encerrados pelo predicado \texttt{data\_real\_devolucao IS NULL}, que \'e o crit\'erio definido no dicion\'ario de dados. A consulta exercita quatro jun\c{c}\~oes, sendo duas sobre a mesma tabela FILIAL, com apelidos distintos para a filial de retirada e para a filial de devolu\c{c}\~ao prevista. \'E essa dupla jun\c{c}\~ao que torna vis\'{i}vel, na pr\'atica, a decis\~ao de modelagem de usar duas chaves estrangeiras independentes para FILIAL.
+
+\begin{lstlisting}
+SELECT l.id_locacao,
+       c.nome                                AS cliente,
+       v.placa,
+       CONCAT(v.marca, ' ', v.modelo)        AS veiculo,
+       fr.nome                               AS filial_retirada,
+       fd.nome                               AS filial_devolucao_prevista,
+       l.data_retirada,
+       l.data_prevista_devolucao
+FROM locacao l
+JOIN cliente c  ON c.id_cliente = l.id_cliente
+JOIN veiculo v  ON v.id_veiculo = l.id_veiculo
+JOIN filial  fr ON fr.id_filial = l.id_filial_retirada
+JOIN filial  fd ON fd.id_filial = l.id_filial_devolucao
+WHERE l.data_real_devolucao IS NULL
+ORDER BY l.data_prevista_devolucao;
+\end{lstlisting}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{../../print_00_criacao.png}
+\caption{Resultado da consulta 1. Sete loca\c{c}\~oes em aberto, ordenadas pela data prevista de devolu\c{c}\~ao.}
+\label{fig:consulta1}
+\end{figure*}
+
+\subsubsection{Ve\'{i}culos dispon\'{i}veis por categoria}
+Agrupa a frota dispon\'{i}vel por categoria e concatena as placas com \texttt{GROUP\_CONCAT}. O \texttt{LEFT JOIN} \'e deliberado: ele mant\'em na sa\'{i}da as categorias que est\~ao sem nenhum ve\'{i}culo dispon\'{i}vel, o que um \texttt{INNER JOIN} esconderia. O filtro \texttt{status = 'DISPONIVEL'} fica na condi\c{c}\~ao da jun\c{c}\~ao, e n\~ao no \texttt{WHERE}, justamente para n\~ao anular o efeito do \texttt{LEFT JOIN}.
+
+\begin{lstlisting}
+SELECT cat.nome                      AS categoria,
+       cat.valor_diaria,
+       COUNT(v.id_veiculo)           AS veiculos_disponiveis,
+       GROUP_CONCAT(CONCAT(v.marca, ' ', v.modelo, ' (', v.placa, ')')
+                    ORDER BY v.placa SEPARATOR ' | ') AS frota_disponivel
+FROM categoria cat
+LEFT JOIN veiculo v ON v.id_categoria = cat.id_categoria
+                   AND v.status = 'DISPONIVEL'
+GROUP BY cat.id_categoria, cat.nome, cat.valor_diaria
+ORDER BY veiculos_disponiveis DESC, cat.nome;
+\end{lstlisting}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{../../print_01_criacao.png}
+\caption{Resultado da consulta 2. As cinco categorias com a contagem e a rela\c{c}\~ao dos ve\'{i}culos dispon\'{i}veis.}
+\label{fig:consulta2}
+\end{figure*}
+
+\subsubsection{Cliente com maior n\'umero de loca\c{c}\~oes}
+Aplica \texttt{COUNT} com \texttt{GROUP BY} sobre a tabela associativa e ordena pelo total. O \texttt{LIMIT 1} devolve apenas o primeiro colocado, como pede o enunciado; sem ele a mesma consulta produz o ranking completo dos clientes. O desempate secund\'ario por nome evita que o resultado dependa da ordem f\'{i}sica das linhas.
+
+\begin{lstlisting}
+SELECT c.nome                 AS cliente,
+       c.cpf,
+       COUNT(l.id_locacao)    AS total_locacoes
+FROM cliente c
+JOIN locacao l ON l.id_cliente = c.id_cliente
+GROUP BY c.id_cliente, c.nome, c.cpf
+ORDER BY total_locacoes DESC, c.nome
+LIMIT 1;
++-------------------------+-------------+----------------+
+| cliente                 | cpf         | total_locacoes |
++-------------------------+-------------+----------------+
+| Marcos Vinicius Andrade | 07894561203 |              5 |
++-------------------------+-------------+----------------+
+\end{lstlisting}
+
+\subsubsection{Faturamento por filial}
+Soma o \texttt{valor\_total} dos contratos encerrados, agrupando pela filial de retirada. O filtro por \texttt{status = 'FINALIZADA'} \'e necess\'ario porque, no modelo, \texttt{valor\_total} \'e o valor efetivamente faturado e permanece nulo enquanto a loca\c{c}\~ao est\'a aberta. Incluir contratos cancelados inflaria o faturamento com neg\'ocios que n\~ao se realizaram.
+
+\begin{lstlisting}
+SELECT f.nome                  AS filial,
+       f.cidade,
+       COUNT(l.id_locacao)     AS locacoes_finalizadas,
+       SUM(l.valor_total)      AS faturamento_total
+FROM filial f
+JOIN locacao l ON l.id_filial_retirada = f.id_filial
+WHERE l.status = 'FINALIZADA'
+GROUP BY f.id_filial, f.nome, f.cidade
+ORDER BY faturamento_total DESC;
+\end{lstlisting}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{../../print_02_criacao.png}
+\caption{Resultado da consulta 4. Faturamento acumulado por filial de retirada, considerando apenas contratos encerrados.}
+\label{fig:consulta4}
+\end{figure*}
+
+\subsubsection{Loca\c{c}\~oes com atraso na devolu\c{c}\~ao}
+Compara a data real com a data prevista de devolu\c{c}\~ao e calcula a diferen\c{c}a em dias com \texttt{DATEDIFF}. A compara\c{c}\~ao direta entre as duas colunas s\'o \'e poss\'{i}vel porque ambas guardam o instante completo, e n\~ao apenas a data, o que foi definido no dicion\'ario de dados. Contratos em aberto ficam fora da sa\'{i}da, j\'a que a compara\c{c}\~ao com nulo n\~ao \'e verdadeira.
+
+\begin{lstlisting}
+SELECT l.id_locacao,
+       c.nome                        AS cliente,
+       v.placa,
+       l.data_prevista_devolucao,
+       l.data_real_devolucao,
+       DATEDIFF(l.data_real_devolucao, l.data_prevista_devolucao) AS dias_de_atraso
+FROM locacao l
+JOIN cliente c ON c.id_cliente = l.id_cliente
+JOIN veiculo v ON v.id_veiculo = l.id_veiculo
+WHERE l.data_real_devolucao > l.data_prevista_devolucao
+ORDER BY dias_de_atraso DESC, l.id_locacao;
+\end{lstlisting}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{../../print_03_criacao.png}
+\caption{Resultado da consulta 5. Tr\^es devolu\c{c}\~oes fora do prazo, ordenadas pelo n\'umero de dias de atraso.}
+\label{fig:consulta5}
+\end{figure*}
+
+\subsubsection{Custo de manuten\c{c}\~ao por ve\'{i}culo}
+Consulta prevista como opcional no enunciado e inclu\'{i}da porque a entidade MANUTENCAO faz parte do modelo. Agrega quantidade, custo total e custo m\'edio por ve\'{i}culo. O custo m\'edio evidencia a diferen\c{c}a entre um ve\'{i}culo com uma \'unica interven\c{c}\~ao cara e outro com interven\c{c}\~oes recorrentes de menor valor, informa\c{c}\~ao que o custo total sozinho n\~ao separa.
+
+\begin{lstlisting}
+SELECT v.placa,
+       CONCAT(v.marca, ' ', v.modelo)   AS veiculo,
+       COUNT(m.id_manutencao)           AS qtd_manutencoes,
+       SUM(m.custo)                     AS custo_total,
+       ROUND(AVG(m.custo), 2)           AS custo_medio
+FROM veiculo v
+JOIN manutencao m ON m.id_veiculo = v.id_veiculo
+GROUP BY v.id_veiculo, v.placa, v.marca, v.modelo
+ORDER BY custo_total DESC;
+\end{lstlisting}
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{../../print_04_criacao.png}
+\caption{Resultado da consulta 6. Custo de manuten\c{c}\~ao acumulado e m\'edio por ve\'{i}culo.}
+\label{fig:consulta6}
+\end{figure*}
 
 \section{Experi\^encia dos Integrantes}
 
 \subsection{Marcello Azevedo Pinheiro Siqueira}
-Respons\'avel pelo levantamento das entidades a partir do cen\'ario, pela defini\c{c}\~ao das regras de neg\'ocio e pela constru\c{c}\~ao do dicion\'ario de dados, incluindo as fichas de campos, os dom\'inios controlados e os \'indices. Tamb\'em organizou o reposit\'orio do grupo e a estrutura deste documento. A maior dificuldade foi definir o n\'ivel de detalhe dos dom\'inios sem transformar o dicion\'ario em uma c\'opia do script SQL.
+Respons\'avel pelo levantamento das entidades a partir do cen\'ario, pela defini\c{c}\~ao das regras de neg\'ocio e pela constru\c{c}\~ao do dicion\'ario de dados, incluindo as fichas de campos, os dom\'{i}nios controlados e os \'{i}ndices. Tamb\'em organizou o reposit\'orio do grupo e a estrutura deste documento. A maior dificuldade foi definir o n\'{i}vel de detalhe dos dom\'{i}nios sem transformar o dicion\'ario em uma c\'opia do script SQL.
 
 \subsection{Lucas Basile}
-Respons\'avel pela modelagem entidade-relacionamento, pela defini\c{c}\~ao das cardinalidades e pela representa\c{c}\~ao dos dois relacionamentos independentes entre LOCACAO e FILIAL. Trabalhou tamb\'em a resolu\c{c}\~ao do relacionamento N:N entre cliente e ve\'iculo por meio da tabela associativa. A maior dificuldade foi decidir entre chave composta e chave substituta em LOCACAO, resolvida pela constata\c{c}\~ao de que o mesmo cliente pode alugar o mesmo ve\'iculo mais de uma vez.
+Respons\'avel pela modelagem entidade-relacionamento, pela defini\c{c}\~ao das cardinalidades e pela representa\c{c}\~ao dos dois relacionamentos independentes entre LOCACAO e FILIAL. Trabalhou tamb\'em a resolu\c{c}\~ao do relacionamento N:N entre cliente e ve\'{i}culo por meio da tabela associativa, e executou o script de cria\c{c}\~ao e a carga no MySQL, registrando as capturas de tela da Se\c{c}\~ao~\ref{sec:consultas}. A maior dificuldade foi decidir entre chave composta e chave substituta em LOCACAO, resolvida pela constata\c{c}\~ao de que o mesmo cliente pode alugar o mesmo ve\'{i}culo mais de uma vez.
 
 \subsection{Miguel Matos}
 Respons\'avel pela normaliza\c{c}\~ao, partindo da estrutura \'unica n\~ao normalizada e aplicando a 1FN, a 2FN e a 3FN, com o levantamento das depend\^encias funcionais e a justificativa de cada decomposi\c{c}\~ao. Analisou tamb\'em os atributos que aparentam redund\^ancia e permaneceram no modelo. A maior dificuldade foi distinguir atributo derivado de depend\^encia transitiva, j\'a que os dois produzem repeti\c{c}\~ao aparente de informa\c{c}\~ao.
 
 \section{Considera\c{c}\~oes Finais}
 
-O modelo final possui sete rela\c{c}\~oes em Terceira Forma Normal e atende aos quatro pontos exigidos pelo enunciado. As decis\~oes que mais influenciaram o resultado foram tr\^es. A primeira foi manter o valor da di\'aria na categoria e uma c\'opia contratada na loca\c{c}\~ao, o que preserva o hist\'orico de pre\c{c}os sem criar depend\^encia transitiva. A segunda foi usar duas chaves estrangeiras independentes para FILIAL, o que permite retirada e devolu\c{c}\~ao em unidades diferentes. A terceira foi adotar chave prim\'aria substituta em LOCACAO, o que permite que o mesmo par cliente e ve\'iculo se repita ao longo do tempo.
+O modelo final possui sete rela\c{c}\~oes em Terceira Forma Normal e atende aos quatro pontos exigidos pelo enunciado. As decis\~oes que mais influenciaram o resultado foram tr\^es. A primeira foi manter o valor da di\'aria na categoria e uma c\'opia contratada na loca\c{c}\~ao, o que preserva o hist\'orico de pre\c{c}os sem criar depend\^encia transitiva. A segunda foi usar duas chaves estrangeiras independentes para FILIAL, o que permite retirada e devolu\c{c}\~ao em unidades diferentes. A terceira foi adotar chave prim\'aria substituta em LOCACAO, o que permite que o mesmo par cliente e ve\'{i}culo se repita ao longo do tempo.
 
-O pr\'oximo passo \'e a implementa\c{c}\~ao do script de cria\c{c}\~ao no MySQL 8, a carga de ao menos cinco registros por tabela e a execu\c{c}\~ao das seis consultas previstas na Se\c{c}\~ao \ref{sec:consultas}.
-
-\begin{thebibliography}{9}
-
-\bibitem{elmasri} R. Elmasri e S. B. Navathe, \textit{Sistemas de Banco de Dados}, 7. ed. S\~ao Paulo: Pearson, 2019.
-
-\bibitem{date} C. J. Date, \textit{Introdu\c{c}\~ao a Sistemas de Bancos de Dados}, 8. ed. Rio de Janeiro: Elsevier, 2004.
-
-\bibitem{silberschatz} A. Silberschatz, H. F. Korth e S. Sudarshan, \textit{Sistema de Banco de Dados}, 7. ed. Rio de Janeiro: LTC, 2020.
-
-\bibitem{codd} E. F. Codd, ``A relational model of data for large shared data banks,'' \textit{Communications of the ACM}, vol. 13, n. 6, p. 377--387, 1970.
-
-\bibitem{mysql} Oracle Corporation, \textit{MySQL 8.4 Reference Manual}. [Online]. Dispon\'ivel: \url{https://dev.mysql.com/doc/refman/8.4/en/}
-
-\bibitem{lab} M. S. de Sousa, \textit{Laborat\'orio 01: Banco de Dados}. Bras\'ilia: Instituto Brasileiro de Ensino, Desenvolvimento e Pesquisa, 2026.
-
-\end{thebibliography}
+As Etapas 4 e 5 confirmaram o modelo na pr\'atica. O script de cria\c{c}\~ao foi executado no MySQL 8 sem nenhum ajuste no modelo l\'ogico, a carga cobriu as sete tabelas e as seis consultas obrigat\'orias devolveram resultados coerentes, apresentados na Se\c{c}\~ao~\ref{sec:consultas}. A decomposi\c{c}\~ao em 3FN se mostrou adequada tamb\'em na escrita das consultas: nenhuma delas precisou de subconsulta correlacionada ou de tratamento de redund\^ancia, e todas foram resolvidas com jun\c{c}\~ao e agrega\c{c}\~ao diretas.

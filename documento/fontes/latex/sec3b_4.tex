@@ -127,6 +127,8 @@ O hist\'orico de vers\~oes do dicion\'ario est\'a na Tabela \ref{tab:versoes}.
 \hline
 1.0 & 14/09/2026 & Vers\~ao inicial com as sete tabelas, relacionamentos, dom\'inios e \'indices & Grupo 3 \\
 \hline
+2.0 & 29/09/2026 & Inclus\~ao da Se\c{c}\~ao VI com o script de cria\c{c}\~ao, a carga de dados e os resultados das seis consultas & Grupo 3 \\
+\hline
 \end{tabular}
 \end{table}
 
@@ -143,7 +145,7 @@ A Figura \ref{fig:conceitual} apresenta o modelo conceitual, no qual os tr\^es t
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\textwidth]{../der/der_conceitual.pdf}
+\includegraphics[width=\textwidth]{../../../der/der_conceitual.pdf}
 \caption{Modelo conceitual do cen\'ario. O losango ALUGA, em laranja, representa o relacionamento N:N entre CLIENTE e VEICULO. Ele carrega atributos pr\'oprios (datas, quilometragens e valores) e liga-se duas vezes a FILIAL, na retirada (tracejado) e na devolu\c{c}\~ao (pontilhado). No modelo l\'ogico esse relacionamento \'e resolvido pela tabela associativa LOCACAO. O losango em vermelho representa o \'unico relacionamento 1:1 do modelo.}
 \label{fig:conceitual}
 \end{figure*}
@@ -175,7 +177,7 @@ O enunciado lista quatro pontos que o modelo precisa resolver. O atendimento de 
 
 \begin{figure*}[p]
 \centering
-\includegraphics[height=0.92\textheight,keepaspectratio]{../der/der_logico.pdf}
+\includegraphics[height=0.92\textheight,keepaspectratio]{../../../der/der_logico.pdf}
 \caption{Modelo l\'ogico do banco de dados da locadora, com chaves prim\'arias (PK), chaves estrangeiras (FK), restri\c{c}\~oes de unicidade (UQ) e cardinalidades. A liga\c{c}\~ao em vermelho indica o relacionamento 1:1. As liga\c{c}\~oes tracejada e pontilhada indicam, respectivamente, a filial de retirada e a filial de devolu\c{c}\~ao.}
 \label{fig:der}
 \end{figure*}

@@ -327,7 +327,8 @@ const s3e = [
   ...cap("VII", "Histórico de versões"),
   table([800, 1000, 2073, 1000], [
     ["Versão","Data","Alteração","Responsável"],
-    ["1.0","14/09/2026","Versão inicial com as sete tabelas, relacionamentos, domínios e índices","Grupo 3"]
+    ["1.0","14/09/2026","Versão inicial com as sete tabelas, relacionamentos, domínios e índices","Grupo 3"],
+    ["2.0","29/09/2026","Inclusão da Seção VI com o script de criação, a carga de dados e os resultados das seis consultas","Grupo 3"]
   ], { centerCols: [0, 1] }),
   gap(120)
 ];
@@ -480,28 +481,182 @@ const s5b = [
   gap(120)
 ];
 // ---------- VI a VIII ----------
-const s6 = [
+const s6a = [
   sec("VI", "Resultados das Consultas"),
   body("Esta seção reúne o script de criação do banco, a carga de dados e as consultas obrigatórias com os respectivos resultados de execução no MySQL 8, correspondentes às Etapas 4 e 5 do laboratório."),
-  body("*Conteúdo em elaboração. Esta versão do documento cobre as Etapas 1, 2 e 3. As capturas de tela das seis consultas serão inseridas nesta seção na versão 2.0, conforme o histórico da Tabela VII.*"),
-  body("As consultas previstas são as seguintes."),
-  numit("Locações em aberto, identificadas por `data_real_devolucao IS NULL`.", 1),
-  numit("Veículos disponíveis agrupados por categoria.", 2),
-  numit("Cliente com maior número de locações, com COUNT e GROUP BY.", 3),
-  numit("Faturamento total por filial, com SUM, JOIN e GROUP BY.", 4),
-  numit("Locações com atraso na devolução, por comparação entre `data_prevista_devolucao` e `data_real_devolucao`.", 5),
-  numit("Custo total de manutenção por veículo, a partir da tabela `manutencao`.", 6),
-  gap(120),
+  sub("A", "Script de criação e carga"),
+  body("O script `Laboratorio01_Grupo3.sql`, disponível no repositório do grupo, recria o banco `locadora` do zero e é autossuficiente. Ele cria as sete tabelas do modelo lógico no motor InnoDB, com conjunto de caracteres `utf8mb4`, somando 7 chaves primárias, 8 chaves estrangeiras, 8 restrições de unicidade e 21 restrições `CHECK`. As restrições `CHECK` implementam os domínios controlados definidos na Seção III, como o conjunto fechado de valores de `status` e a exigência de quilometragem não negativa, de modo que a regra fica no banco e não depende da aplicação."),
+  body("A carga insere 5 categorias, 5 filiais, 6 clientes, 30 veículos distribuídos em 6 por categoria, 30 registros documentais, 17 locações e 9 manutenções, acima do mínimo de cinco registros por tabela exigido pelo enunciado. Os dados foram construídos para que as seis consultas devolvam resultados não vazios e coerentes entre si: nenhum veículo possui duas locações sobrepostas no tempo, a quilometragem cresce de forma monotônica ao longo das locações de um mesmo veículo, o `status` de cada veículo corresponde às locações em aberto e às manutenções em andamento, e o `valor_total` de cada contrato encerrado equivale ao número de diárias multiplicado pela diária contratada."),
+  sub("B", "Consultas obrigatórias"),
+  body("As seis consultas e os respectivos resultados de execução são apresentados a seguir. O ambiente é o MySQL 8.0.46 com o `sql_mode` padrão da instalação, que inclui `ONLY_FULL_GROUP_BY` e, portanto, exige que toda coluna não agregada apareça na cláusula `GROUP BY`.")
+];
+
+// ---------- consultas em largura total ----------
+let FIG = 2;   // Figuras 1 e 2 sao os DER
+function consulta(num, titulo, descricao, sql, imagem, legenda) {
+  const bloco = [
+    subsub(num, titulo),
+    body(descricao, { noIndent: true, after: 60 }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 },
+      children: [] })
+  ];
+  bloco.pop();
+  bloco.push(box(sql, FULLW));
+  if (imagem && fs.existsSync(imagem)) {
+    const dim = medida(imagem);
+    bloco.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120, after: 0 },
+      children: [ new ImageRun({ type: "png", data: fs.readFileSync(imagem),
+        transformation: { width: dim.w, height: dim.h } }) ] }));
+    bloco.push(figcap(++FIG, legenda));
+  }
+  return bloco;
+}
+
+// largura em pixels proporcional, mantendo a mesma escala em todas as capturas
+const ESCALA = 660 / 1408;
+function medida(arquivo) {
+  const b = fs.readFileSync(arquivo);
+  const w = b.readUInt32BE(16), h = b.readUInt32BE(20);
+  return { w: Math.round(w * ESCALA), h: Math.round(h * ESCALA) };
+}
+
+const SQL1 = [
+"SELECT l.id_locacao,",
+"       c.nome                                AS cliente,",
+"       v.placa,",
+"       CONCAT(v.marca, ' ', v.modelo)        AS veiculo,",
+"       fr.nome                               AS filial_retirada,",
+"       fd.nome                               AS filial_devolucao_prevista,",
+"       l.data_retirada,",
+"       l.data_prevista_devolucao",
+"FROM locacao l",
+"JOIN cliente c  ON c.id_cliente = l.id_cliente",
+"JOIN veiculo v  ON v.id_veiculo = l.id_veiculo",
+"JOIN filial  fr ON fr.id_filial = l.id_filial_retirada",
+"JOIN filial  fd ON fd.id_filial = l.id_filial_devolucao",
+"WHERE l.data_real_devolucao IS NULL",
+"ORDER BY l.data_prevista_devolucao;"
+];
+
+const SQL2 = [
+"SELECT cat.nome                      AS categoria,",
+"       cat.valor_diaria,",
+"       COUNT(v.id_veiculo)           AS veiculos_disponiveis,",
+"       GROUP_CONCAT(CONCAT(v.marca, ' ', v.modelo, ' (', v.placa, ')')",
+"                    ORDER BY v.placa SEPARATOR ' | ') AS frota_disponivel",
+"FROM categoria cat",
+"LEFT JOIN veiculo v ON v.id_categoria = cat.id_categoria",
+"                   AND v.status = 'DISPONIVEL'",
+"GROUP BY cat.id_categoria, cat.nome, cat.valor_diaria",
+"ORDER BY veiculos_disponiveis DESC, cat.nome;"
+];
+
+const SQL3 = [
+"SELECT c.nome                 AS cliente,",
+"       c.cpf,",
+"       COUNT(l.id_locacao)    AS total_locacoes",
+"FROM cliente c",
+"JOIN locacao l ON l.id_cliente = c.id_cliente",
+"GROUP BY c.id_cliente, c.nome, c.cpf",
+"ORDER BY total_locacoes DESC, c.nome",
+"LIMIT 1;"
+];
+
+const SQL4 = [
+"SELECT f.nome                  AS filial,",
+"       f.cidade,",
+"       COUNT(l.id_locacao)     AS locacoes_finalizadas,",
+"       SUM(l.valor_total)      AS faturamento_total",
+"FROM filial f",
+"JOIN locacao l ON l.id_filial_retirada = f.id_filial",
+"WHERE l.status = 'FINALIZADA'",
+"GROUP BY f.id_filial, f.nome, f.cidade",
+"ORDER BY faturamento_total DESC;"
+];
+
+const SQL5 = [
+"SELECT l.id_locacao,",
+"       c.nome                        AS cliente,",
+"       v.placa,",
+"       l.data_prevista_devolucao,",
+"       l.data_real_devolucao,",
+"       DATEDIFF(l.data_real_devolucao, l.data_prevista_devolucao) AS dias_de_atraso",
+"FROM locacao l",
+"JOIN cliente c ON c.id_cliente = l.id_cliente",
+"JOIN veiculo v ON v.id_veiculo = l.id_veiculo",
+"WHERE l.data_real_devolucao > l.data_prevista_devolucao",
+"ORDER BY dias_de_atraso DESC, l.id_locacao;"
+];
+
+const SQL6 = [
+"SELECT v.placa,",
+"       CONCAT(v.marca, ' ', v.modelo)   AS veiculo,",
+"       COUNT(m.id_manutencao)           AS qtd_manutencoes,",
+"       SUM(m.custo)                     AS custo_total,",
+"       ROUND(AVG(m.custo), 2)           AS custo_medio",
+"FROM veiculo v",
+"JOIN manutencao m ON m.id_veiculo = v.id_veiculo",
+"GROUP BY v.id_veiculo, v.placa, v.marca, v.modelo",
+"ORDER BY custo_total DESC;"
+];
+
+const PRINT3 = "../../print_05_consulta3.png";
+
+// Enquanto a captura da consulta 3 nao estiver disponivel, a saida do cliente
+// mysql e anexada a propria caixa da consulta.
+const SAIDA3 = [
+"",
+"+-------------------------+-------------+----------------+",
+"| cliente                 | cpf         | total_locacoes |",
+"+-------------------------+-------------+----------------+",
+"| Marcos Vinicius Andrade | 07894561203 |              5 |",
+"+-------------------------+-------------+----------------+"
+];
+
+const consultasBlocos = [
+  consulta(1, "Locações em aberto",
+    "Identifica os contratos ainda não encerrados pelo predicado `data_real_devolucao IS NULL`, que é o critério definido no dicionário de dados. A consulta exercita quatro junções, sendo duas sobre a mesma tabela FILIAL, com apelidos distintos para a filial de retirada e para a filial de devolução prevista. É essa dupla junção que torna visível, na prática, a decisão de modelagem de usar duas chaves estrangeiras independentes para FILIAL.",
+    SQL1, "../../print_00_criacao.png",
+    "Resultado da consulta 1. Sete locações em aberto, ordenadas pela data prevista de devolução."),
+
+  consulta(2, "Veículos disponíveis por categoria",
+    "Agrupa a frota disponível por categoria e concatena as placas com `GROUP_CONCAT`. O `LEFT JOIN` é deliberado: ele mantém na saída as categorias que estão sem nenhum veículo disponível, o que um `INNER JOIN` esconderia. O filtro `status = 'DISPONIVEL'` fica na condição da junção, e não no `WHERE`, justamente para não anular o efeito do `LEFT JOIN`.",
+    SQL2, "../../print_01_criacao.png",
+    "Resultado da consulta 2. As cinco categorias com a contagem e a relação dos veículos disponíveis."),
+
+  consulta(3, "Cliente com maior número de locações",
+    "Aplica `COUNT` com `GROUP BY` sobre a tabela associativa e ordena pelo total. O `LIMIT 1` devolve apenas o primeiro colocado, como pede o enunciado; sem ele a mesma consulta produz o ranking completo dos clientes. O desempate secundário por nome evita que o resultado dependa da ordem física das linhas.",
+    fs.existsSync(PRINT3) ? SQL3 : SQL3.concat(SAIDA3), PRINT3,
+    "Resultado da consulta 3. O cliente com maior número de contratos no período da carga."),
+
+
+  consulta(4, "Faturamento por filial",
+    "Soma o `valor_total` dos contratos encerrados, agrupando pela filial de retirada. O filtro por `status = 'FINALIZADA'` é necessário porque, no modelo, `valor_total` é o valor efetivamente faturado e permanece nulo enquanto a locação está aberta. Incluir contratos cancelados inflaria o faturamento com negócios que não se realizaram.",
+    SQL4, "../../print_02_criacao.png",
+    "Resultado da consulta 4. Faturamento acumulado por filial de retirada, considerando apenas contratos encerrados."),
+
+  consulta(5, "Locações com atraso na devolução",
+    "Compara a data real com a data prevista de devolução e calcula a diferença em dias com `DATEDIFF`. A comparação direta entre as duas colunas só é possível porque ambas guardam o instante completo, e não apenas a data, o que foi definido no dicionário de dados. Contratos em aberto ficam fora da saída, já que a comparação com nulo não é verdadeira.",
+    SQL5, "../../print_03_criacao.png",
+    "Resultado da consulta 5. Três devoluções fora do prazo, ordenadas pelo número de dias de atraso."),
+
+  consulta(6, "Custo de manutenção por veículo",
+    "Consulta prevista como opcional no enunciado e incluída porque a entidade MANUTENCAO faz parte do modelo. Agrega quantidade, custo total e custo médio por veículo. O custo médio evidencia a diferença entre um veículo com uma única intervenção cara e outro com intervenções recorrentes de menor valor, informação que o custo total sozinho não separa.",
+    SQL6, "../../print_04_criacao.png",
+    "Resultado da consulta 6. Custo de manutenção acumulado e médio por veículo.")
+];
+
+const s6b = [
   sec("VII", "Experiência dos Integrantes"),
   sub("A", "Marcello Azevedo Pinheiro Siqueira"),
   body("Responsável pelo levantamento das entidades a partir do cenário, pela definição das regras de negócio e pela construção do dicionário de dados, incluindo as fichas de campos, os domínios controlados e os índices. Também organizou o repositório do grupo e a estrutura deste documento. A maior dificuldade foi definir o nível de detalhe dos domínios sem transformar o dicionário em uma cópia do script SQL."),
   sub("B", "Lucas Basile"),
-  body("Responsável pela modelagem entidade-relacionamento, pela definição das cardinalidades e pela representação dos dois relacionamentos independentes entre LOCACAO e FILIAL. Trabalhou também a resolução do relacionamento N:N entre cliente e veículo por meio da tabela associativa. A maior dificuldade foi decidir entre chave composta e chave substituta em LOCACAO, resolvida pela constatação de que o mesmo cliente pode alugar o mesmo veículo mais de uma vez."),
+  body("Responsável pela modelagem entidade-relacionamento, pela definição das cardinalidades e pela representação dos dois relacionamentos independentes entre LOCACAO e FILIAL. Trabalhou também a resolução do relacionamento N:N entre cliente e veículo por meio da tabela associativa, e executou o script de criação e a carga no MySQL, registrando as capturas de tela da Seção VI. A maior dificuldade foi decidir entre chave composta e chave substituta em LOCACAO, resolvida pela constatação de que o mesmo cliente pode alugar o mesmo veículo mais de uma vez."),
   sub("C", "Miguel Matos"),
   body("Responsável pela normalização, partindo da estrutura única não normalizada e aplicando a 1FN, a 2FN e a 3FN, com o levantamento das dependências funcionais e a justificativa de cada decomposição. Analisou também os atributos que aparentam redundância e permaneceram no modelo. A maior dificuldade foi distinguir atributo derivado de dependência transitiva, já que os dois produzem repetição aparente de informação."),
   sec("VIII", "Considerações Finais"),
   body("O modelo final possui sete relações em Terceira Forma Normal e atende aos quatro pontos exigidos pelo enunciado. As decisões que mais influenciaram o resultado foram três. A primeira foi manter o valor da diária na categoria e uma cópia contratada na locação, o que preserva o histórico de preços sem criar dependência transitiva. A segunda foi usar duas chaves estrangeiras independentes para FILIAL, o que permite retirada e devolução em unidades diferentes. A terceira foi adotar chave primária substituta em LOCACAO, o que permite que o mesmo par cliente e veículo se repita ao longo do tempo."),
-  body("O próximo passo é a implementação do script de criação no MySQL 8, a carga de ao menos cinco registros por tabela e a execução das seis consultas previstas na Seção VI."),
+  body("As Etapas 4 e 5 confirmaram o modelo na prática. O script de criação foi executado no MySQL 8 sem nenhum ajuste no modelo lógico, a carga cobriu as sete tabelas e as seis consultas obrigatórias devolveram resultados coerentes, apresentados na Seção VI. A decomposição em 3FN se mostrou adequada também na escrita das consultas: nenhuma delas precisou de subconsulta correlacionada ou de tratamento de redundância, e todas foram resolvidas com junção e agregação diretas."),
   new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240, after: 120 }, keepNext: true,
     children: [ new TextRun({ text: "Referências", font: FONT, size: 20, smallCaps: true }) ] })
 ];
@@ -568,7 +723,9 @@ const doc = new Document({
     S(COL1, tabIdx),
     S(COL2, [...s3e, ...s4]),
     S(COL1, [...figuraConceitual, ...figura]),
-    S(COL2, [...s5a, ...s5b, ...s6, ...refs]),
+    S(COL2, [...s5a, ...s5b, ...s6a]),
+    ...consultasBlocos.filter(Boolean).map(b => S(COL1, b)),
+    S(COL2, [...s6b, ...refs]),
     S(COL1, apHead),
     ...fichaBlocks.map(b => S(COL1, b))
   ]
