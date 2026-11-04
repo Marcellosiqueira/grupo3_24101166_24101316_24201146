@@ -27,6 +27,7 @@ der/
   der_conceitual.png/.pdf     modelo conceitual, com as cardinalidades 1:1, 1:N e N:N
   der_logico.png/.pdf         modelo lógico, com PK, FK e restrições de unicidade
   *.dot                       fontes dos diagramas (Graphviz)
+locadora/                     Laboratório Locadora v2 (Bimestre II): sistema PHP, backup e LEIAME.md
 sql/
   Laboratorio01_Grupo3.sql    Parte 1, Etapas 4 e 5: criação do banco, carga de dados e consultas
   script_parte2.sql           Parte 2: views, índices, triggers, procedure e function
@@ -56,6 +57,10 @@ Ao editar o `.docx`, reexportar o `.pdf` para que os dois fiquem iguais.
 | 2 | Triggers, procedure e function | Concluída |
 | 3 | Controle de concorrência | Concluída |
 | Relatório | Relatório de evidências | Concluído |
+
+## Laboratório Locadora v2, Bimestre II
+
+Sistema PHP + MySQL em [`locadora/`](locadora/). Execução, resultados e comandos em [`locadora/LEIAME.md`](locadora/LEIAME.md).
 
 ## Modelo
 
