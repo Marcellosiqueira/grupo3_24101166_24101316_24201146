@@ -45,6 +45,11 @@ class ClienteController
     public function atualizar(): void
     {
         $id = inteiro($_GET['id'] ?? 0);
+        // rowCount() da 0 tambem quando nada mudou; por isso confere antes se o cliente existe.
+        if (!(new ClienteModel())->buscar($id)) {
+            aviso('erro', 'Cliente não encontrado.');
+            redirecionar('clientes');
+        }
         $d = $this->ler();
         $erros = $this->validar($d);
         if (!$erros) {

@@ -39,6 +39,16 @@ class LocacaoController
         $erros = [];
         if (!inteiro($d['id_cliente']) || !inteiro($d['id_veiculo']) || !inteiro($d['id_filial_devolucao'])) {
             $erros[] = 'Escolha cliente, carro e filial de devolução.';
+        } else {
+            // A lista do formulario so mostra ativos, mas o servidor confere de novo.
+            $cliente = (new LocacaoModel())->cliente(inteiro($d['id_cliente']));
+            if (!$cliente) {
+                $erros[] = 'Cliente não encontrado.';
+            } elseif ($cliente['status'] !== 'ATIVO') {
+                $erros[] = 'Cliente com status ' . $cliente['status'] . ' não pode abrir locação.';
+            } elseif ($cliente['validade_cnh'] < date('Y-m-d')) {
+                $erros[] = 'CNH do cliente vencida em ' . date('d/m/Y', strtotime($cliente['validade_cnh'])) . '.';
+            }
         }
         $formato = 'Y-m-d\TH:i';
         if (!dataValida($d['data_retirada'], $formato) || !dataValida($d['data_prevista_devolucao'], $formato)) {

@@ -20,6 +20,13 @@ class LocacaoModel
         )->fetchAll();
     }
 
+    public function cliente(int $id): ?array
+    {
+        $stmt = $this->db->prepare("SELECT status, validade_cnh FROM cliente WHERE id_cliente = :id");
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch() ?: null;
+    }
+
     public function clientesAtivos(): array
     {
         return $this->db->query("SELECT id_cliente, nome FROM cliente WHERE status = 'ATIVO' ORDER BY nome")->fetchAll();

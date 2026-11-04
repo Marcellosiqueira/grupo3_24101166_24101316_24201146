@@ -46,6 +46,11 @@ class CarroController
     public function atualizar(): void
     {
         $id = inteiro($_GET['id'] ?? 0);
+        // rowCount() da 0 tambem quando nada mudou; por isso confere antes se o carro existe.
+        if (!(new CarroModel())->buscar($id)) {
+            aviso('erro', 'Carro não encontrado.');
+            redirecionar('carros');
+        }
         $d = $this->ler();
         $erros = $this->validar($d);
         if (!$erros) {

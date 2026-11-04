@@ -3,10 +3,6 @@ require_once __DIR__ . '/../models/UsuarioModel.php';
 
 class AuthController
 {
-    // Hash de uma senha qualquer: quando o e-mail nao existe, o password_verify
-    // roda do mesmo jeito e a resposta leva o mesmo tempo.
-    private const HASH_FALSO = '$2y$10$bakg5W0Cm0KLtFX3qZuagOrRanV830raScK.Dv3GDHxVdCuQd/jQO';
-
     public function login(): void
     {
         if (!empty($_SESSION['usuario_id'])) {
@@ -21,7 +17,7 @@ class AuthController
         $senha = (string) ($_POST['senha'] ?? '');
         $usuario = (new UsuarioModel())->buscarPorEmail($email);
 
-        if (!password_verify($senha, $usuario['senha_hash'] ?? self::HASH_FALSO) || !$usuario) {
+        if (!($usuario && password_verify($senha, $usuario['senha_hash']))) {
             view('auth/login', ['erro' => 'E-mail ou senha inválidos', 'email' => $email]);
             return;
         }

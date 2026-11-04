@@ -1,5 +1,5 @@
--- Locadora v2. Rodar como root, depois de sql/Laboratorio01_Grupo3.sql e
--- sql/script_parte2.sql.
+-- Locadora v2. Registro do que esta etapa mudou no esquema do Bimestre I.
+-- Ja esta aplicado em backup_locadora.sql: nao rodar de novo.
 -- Senhas de teste: admin2026 e atende2026.
 
 USE locadora;

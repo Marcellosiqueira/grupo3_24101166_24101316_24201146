@@ -1,6 +1,10 @@
 <?php
 // Etapa 5: tenta DELETE e DROP fisicos com a mesma conexao da aplicacao.
 // Rodar pelo terminal: php testes/delete_fisico.php
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('Este teste só roda pela linha de comando.');
+}
 require_once __DIR__ . '/../config/funcoes.php';
 require_once __DIR__ . '/../config/database.php';
 
