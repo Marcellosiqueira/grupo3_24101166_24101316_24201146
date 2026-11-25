@@ -11,13 +11,16 @@ class CarroController
         view('carros/lista', ['carros' => (new CarroModel())->listar($busca), 'busca' => $busca]);
     }
 
+    // Cadastrar, editar e excluir carro e so do perfil admin. O atendente so consulta.
     public function novo(): void
     {
+        exigirAdmin();
         $this->form('carro_salvar', 'Novo carro', ['combustivel' => 'FLEX', 'km_atual' => 0]);
     }
 
     public function editar(): void
     {
+        exigirAdmin();
         $id = inteiro($_GET['id'] ?? 0);
         $carro = (new CarroModel())->buscar($id);
         if (!$carro) {
@@ -29,6 +32,7 @@ class CarroController
 
     public function salvar(): void
     {
+        exigirAdmin();
         $d = $this->ler();
         $erros = $this->validar($d);
         if (!$erros) {
@@ -45,6 +49,7 @@ class CarroController
 
     public function atualizar(): void
     {
+        exigirAdmin();
         $id = inteiro($_GET['id'] ?? 0);
         // rowCount() da 0 tambem quando nada mudou; por isso confere antes se o carro existe.
         if (!(new CarroModel())->buscar($id)) {
@@ -86,7 +91,7 @@ class CarroController
     private function ler(): array
     {
         $d = [];
-        foreach (['placa', 'chassi', 'marca', 'modelo', 'ano_fabricacao', 'ano_modelo', 'cor', 'combustivel', 'km_atual', 'id_categoria', 'id_filial'] as $c) {
+        foreach (['placa', 'chassi', 'marca', 'modelo', 'ano_fabricacao', 'ano_modelo', 'cor_externa', 'combustivel', 'km_atual', 'id_categoria', 'id_filial'] as $c) {
             $d[$c] = trim((string) ($_POST[$c] ?? ''));
         }
         $d['placa'] = strtoupper($d['placa']);

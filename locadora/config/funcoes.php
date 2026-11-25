@@ -6,11 +6,11 @@ function e(?string $texto): string
     return htmlspecialchars($texto ?? '', ENT_QUOTES, 'UTF-8');
 }
 
-function view(string $nome, array $vars = []): void
+function view(string $arquivoView, array $vars = []): void
 {
     extract($vars);
     require __DIR__ . '/../views/header.php';
-    require __DIR__ . '/../views/' . $nome . '.php';
+    require __DIR__ . '/../views/' . $arquivoView . '.php';
     require __DIR__ . '/../views/footer.php';
 }
 

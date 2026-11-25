@@ -1,6 +1,10 @@
 <?php
 // Porta unica de entrada do sistema.
-session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
+session_set_cookie_params([
+    'httponly' => true,
+    'samesite' => 'Lax',
+    'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+]);
 session_start();
 ini_set('display_errors', '0');
 
@@ -22,7 +26,11 @@ $rotas = [
         'locacoes'       => [LocacaoController::class, 'listar'],
         'locacao_nova'   => [LocacaoController::class, 'nova'],
         'login'          => [AuthController::class, 'login'],
+        'definir_senha'  => [AuthController::class, 'definirSenha'],
+        'alterar_senha'  => [AuthController::class, 'alterarSenha'],
+        'usuarios'       => [AuthController::class, 'listar'],
         'usuario_novo'   => [AuthController::class, 'novo'],
+        'painel'         => [PainelController::class, 'mensal'],
     ],
     'POST' => [
         'carro_salvar'      => [CarroController::class, 'salvar'],
@@ -34,6 +42,9 @@ $rotas = [
         'autenticar'        => [AuthController::class, 'autenticar'],
         'sair'              => [AuthController::class, 'sair'],
         'usuario_salvar'    => [AuthController::class, 'salvar'],
+        'usuario_link'      => [AuthController::class, 'gerarLink'],
+        'definir_senha_salvar'  => [AuthController::class, 'salvarSenhaNova'],
+        'alterar_senha_salvar'  => [AuthController::class, 'salvarAlteracao'],
     ],
 ];
 
@@ -45,9 +56,14 @@ if ($rota === null) {
     exit('Página não encontrada.');
 }
 
-// Sem login, so a tela de entrada funciona.
-if (!in_array($acao, ['login', 'autenticar'], true)) {
+// Sem login, so a tela de entrada e o link para escolher a senha funcionam.
+if (!in_array($acao, ['login', 'autenticar', 'definir_senha', 'definir_senha_salvar'], true)) {
     exigirLogin();
+    // Conta com senha provisoria so pode trocar a senha ou sair.
+    if (!empty($_SESSION['deve_trocar_senha'])
+        && !in_array($acao, ['alterar_senha', 'alterar_senha_salvar', 'sair'], true)) {
+        redirecionar('alterar_senha');
+    }
 }
 
 try {

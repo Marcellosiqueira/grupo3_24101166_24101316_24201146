@@ -5,7 +5,11 @@ class CarroModel
     private PDO $db;
 
     private const CAMPOS = ['placa', 'chassi', 'marca', 'modelo', 'ano_fabricacao', 'ano_modelo',
-                            'cor', 'combustivel', 'km_atual', 'id_categoria', 'id_filial'];
+                            'cor_externa', 'combustivel', 'km_atual', 'id_categoria', 'id_filial'];
+
+    // Colunas lidas pelo sistema: so cor_externa, nunca cor (expandir e contrair, Parte 02).
+    private const COLUNAS = 'v.id_veiculo, v.placa, v.chassi, v.marca, v.modelo, v.ano_fabricacao, v.ano_modelo,
+                             v.cor_externa, v.combustivel, v.km_atual, v.status, v.id_categoria, v.id_filial';
 
     public function __construct()
     {
@@ -15,7 +19,7 @@ class CarroModel
     public function listar(string $busca = ''): array
     {
         $stmt = $this->db->prepare(
-            "SELECT v.*, c.nome AS categoria, f.nome AS filial
+            "SELECT " . self::COLUNAS . ", c.nome AS categoria, f.nome AS filial
                FROM veiculo v
                JOIN categoria c ON c.id_categoria = v.id_categoria
                JOIN filial f ON f.id_filial = v.id_filial
@@ -28,7 +32,7 @@ class CarroModel
 
     public function buscar(int $id): ?array
     {
-        $stmt = $this->db->prepare("SELECT * FROM veiculo WHERE id_veiculo = :id AND deleted_at IS NULL");
+        $stmt = $this->db->prepare("SELECT " . self::COLUNAS . " FROM veiculo v WHERE v.id_veiculo = :id AND v.deleted_at IS NULL");
         $stmt->execute([':id' => $id]);
         return $stmt->fetch() ?: null;
     }
@@ -36,8 +40,8 @@ class CarroModel
     public function criar(array $d): void
     {
         $stmt = $this->db->prepare(
-            "INSERT INTO veiculo (placa, chassi, marca, modelo, ano_fabricacao, ano_modelo, cor, combustivel, km_atual, id_categoria, id_filial)
-             VALUES (:placa, :chassi, :marca, :modelo, :ano_fabricacao, :ano_modelo, :cor, :combustivel, :km_atual, :id_categoria, :id_filial)"
+            "INSERT INTO veiculo (placa, chassi, marca, modelo, ano_fabricacao, ano_modelo, cor_externa, combustivel, km_atual, id_categoria, id_filial)
+             VALUES (:placa, :chassi, :marca, :modelo, :ano_fabricacao, :ano_modelo, :cor_externa, :combustivel, :km_atual, :id_categoria, :id_filial)"
         );
         $stmt->execute($this->parametros($d));
     }
@@ -46,7 +50,7 @@ class CarroModel
     {
         $stmt = $this->db->prepare(
             "UPDATE veiculo SET placa = :placa, chassi = :chassi, marca = :marca, modelo = :modelo,
-                    ano_fabricacao = :ano_fabricacao, ano_modelo = :ano_modelo, cor = :cor,
+                    ano_fabricacao = :ano_fabricacao, ano_modelo = :ano_modelo, cor_externa = :cor_externa,
                     combustivel = :combustivel, km_atual = :km_atual,
                     id_categoria = :id_categoria, id_filial = :id_filial
               WHERE id_veiculo = :id AND deleted_at IS NULL"

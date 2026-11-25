@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 8.0.46, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 8.4.3, for Win64 (x86_64)
 --
--- Host: localhost    Database: locadora
+-- Host: 127.0.0.1    Database: locadora
 -- ------------------------------------------------------
--- Server version	8.0.46-0ubuntu0.24.04.4
+-- Server version	8.4.3
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -374,11 +374,17 @@ CREATE TABLE `usuarios` (
   `id` int NOT NULL AUTO_INCREMENT,
   `nome` varchar(100) NOT NULL,
   `email` varchar(150) NOT NULL,
-  `senha_hash` varchar(255) NOT NULL,
+  `senha_hash` varchar(255) DEFAULT NULL,
   `perfil` enum('admin','atendente') NOT NULL DEFAULT 'atendente',
   `criado_em` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `token_hash` char(64) DEFAULT NULL,
+  `token_expira_em` datetime DEFAULT NULL,
+  `deve_trocar_senha` tinyint(1) NOT NULL DEFAULT '0',
+  `tentativas_falhas` tinyint unsigned NOT NULL DEFAULT '0',
+  `bloqueado_ate` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`)
+  UNIQUE KEY `email` (`email`),
+  UNIQUE KEY `uq_usuarios_token` (`token_hash`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -388,7 +394,7 @@ CREATE TABLE `usuarios` (
 
 LOCK TABLES `usuarios` WRITE;
 /*!40000 ALTER TABLE `usuarios` DISABLE KEYS */;
-INSERT INTO `usuarios` VALUES (1,'Administrador de teste','admin@locadora.test','$2y$10$D56btf0dvs1v4yVTdZMZj.A52JKmY18IM4BbPEIFEnsc4pFQWFpdS','admin','2026-11-04 13:08:07'),(2,'Atendente de teste','atendente@locadora.test','$2y$10$7RqHFjUDcbPAhLVbPJFZEu8GBT0tmT04z9xhyuaySHtb/Ek4m24lW','atendente','2026-11-04 13:08:07');
+INSERT INTO `usuarios` VALUES (1,'Administrador de teste','admin@locadora.test','$2y$10$D56btf0dvs1v4yVTdZMZj.A52JKmY18IM4BbPEIFEnsc4pFQWFpdS','admin','2026-11-04 13:08:07',NULL,NULL,1,0,NULL),(2,'Atendente de teste','atendente@locadora.test','$2y$10$7RqHFjUDcbPAhLVbPJFZEu8GBT0tmT04z9xhyuaySHtb/Ek4m24lW','atendente','2026-11-04 13:08:07',NULL,NULL,1,0,NULL);
 /*!40000 ALTER TABLE `usuarios` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -671,4 +677,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-04 10:08:08
+-- Dump completed on 2026-11-04 11:34:11

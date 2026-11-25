@@ -1,6 +1,6 @@
 <div class="cabecalho">
   <h1>Carros</h1>
-  <a class="btn" href="index.php?acao=carro_novo">Novo carro</a>
+  <?php if (ehAdmin()): ?><a class="btn" href="index.php?acao=carro_novo">Novo carro</a><?php endif; ?>
 </div>
 <form class="nota" method="get" action="index.php">
   <input type="hidden" name="acao" value="carros">
@@ -12,7 +12,7 @@
 <?php else: ?>
 <div class="tabela-rolagem">
 <table>
-  <thead><tr><th>Placa</th><th>Marca</th><th>Modelo</th><th>Ano</th><th>Categoria</th><th>Filial</th><th>Km</th><th>Status</th><th class="acoes">Ações</th></tr></thead>
+  <thead><tr><th>Placa</th><th>Marca</th><th>Modelo</th><th>Ano</th><th>Categoria</th><th>Filial</th><th>Km</th><th>Status</th><?php if (ehAdmin()): ?><th class="acoes">Ações</th><?php endif; ?></tr></thead>
   <tbody>
   <?php foreach ($carros as $c): ?>
     <tr>
@@ -24,15 +24,15 @@
       <td><?= e($c['filial']) ?></td>
       <td class="mono"><?= (int) $c['km_atual'] ?></td>
       <td><?= e($c['status']) ?></td>
+      <?php if (ehAdmin()): ?>
       <td class="acoes">
         <a href="index.php?acao=carro_editar&id=<?= (int) $c['id_veiculo'] ?>">Editar</a>
-        <?php if (ehAdmin()): ?>
-          <form class="inline" method="post" action="index.php?acao=carro_excluir">
-            <input type="hidden" name="id" value="<?= (int) $c['id_veiculo'] ?>">
-            <button class="link perigo">Excluir</button>
-          </form>
-        <?php endif; ?>
+        <form class="inline" method="post" action="index.php?acao=carro_excluir">
+          <input type="hidden" name="id" value="<?= (int) $c['id_veiculo'] ?>">
+          <button class="link perigo">Excluir</button>
+        </form>
       </td>
+      <?php endif; ?>
     </tr>
   <?php endforeach; ?>
   </tbody>

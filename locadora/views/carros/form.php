@@ -7,7 +7,7 @@
     <label>Modelo <input name="modelo" required maxlength="60" value="<?= e($dados['modelo'] ?? '') ?>"></label>
     <label>Ano de fabricação <input type="number" name="ano_fabricacao" required value="<?= e((string) ($dados['ano_fabricacao'] ?? '')) ?>"></label>
     <label>Ano do modelo <input type="number" name="ano_modelo" required value="<?= e((string) ($dados['ano_modelo'] ?? '')) ?>"></label>
-    <label>Cor <input name="cor" required maxlength="30" value="<?= e($dados['cor'] ?? '') ?>"></label>
+    <label>Cor <input name="cor_externa" required maxlength="30" value="<?= e($dados['cor_externa'] ?? '') ?>"></label>
     <label>Combustível
       <select name="combustivel">
         <?php foreach ($combustiveis as $x): ?>

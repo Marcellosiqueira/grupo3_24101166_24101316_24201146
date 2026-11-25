@@ -14,7 +14,8 @@
       <a href="index.php?acao=carros">Carros</a>
       <a href="index.php?acao=clientes">Clientes</a>
       <a href="index.php?acao=locacoes">Locações</a>
-      <?php if (ehAdmin()): ?><a href="index.php?acao=usuario_novo">Novo usuário</a><?php endif; ?>
+      <?php if (ehAdmin()): ?><a href="index.php?acao=usuarios">Usuários</a><a href="index.php?acao=painel">Painel</a><?php endif; ?>
+      <a href="index.php?acao=alterar_senha">Alterar senha</a>
     </nav>
     <span class="operador">
       <?= e($_SESSION['nome']) ?> (<?= e($_SESSION['perfil']) ?>)

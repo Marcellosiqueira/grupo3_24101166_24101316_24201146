@@ -3,7 +3,6 @@
   <div class="campos">
     <label class="largo">Nome <input name="nome" required maxlength="100" value="<?= e($dados['nome'] ?? '') ?>"></label>
     <label class="largo">E-mail <input type="email" name="email" required maxlength="150" value="<?= e($dados['email'] ?? '') ?>"></label>
-    <label>Senha <input type="password" name="senha" required minlength="8" autocomplete="new-password"></label>
     <label>Perfil
       <select name="perfil">
         <?php foreach (['atendente', 'admin'] as $x): ?>
@@ -12,8 +11,9 @@
       </select>
     </label>
   </div>
+  <p>A senha não é definida aqui: o sistema gera um link para a própria pessoa escolher a dela.</p>
   <div class="botoes">
-    <button class="btn">Cadastrar</button>
-    <a href="index.php">Cancelar</a>
+    <button class="btn">Cadastrar e gerar link</button>
+    <a href="index.php?acao=usuarios">Cancelar</a>
   </div>
 </form>
