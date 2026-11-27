@@ -2,6 +2,8 @@
 
 Banco `locadora_lab` (cópia do `locadora`), MySQL 8.4.3 do Laragon, com a carga de `scripts/gerar_carga.sql`: 10.006 clientes e 200.017 locações. No nosso esquema, `carros` é `veiculo`, `clientes` é `cliente` e `locacoes` é `locacao`, com as colunas `id_veiculo`, `id_cliente`, `data_retirada` etc.
 
+Estado de `locadora_lab` em 27/11/2026: migrations de `001_baseline` a `009_fato_locacao` aplicadas, incluindo a `002c_cor_externa_not_null`, e locações 11 a 15 devolvidas para a demonstração (`scripts/devolver_demo.sql`, explicado no `LEIAME.md`), seguidas de novo ETL. Os números abaixo são desse estado.
+
 ## Etapa 1, migrations
 
 ### 1. Privilégio
@@ -25,6 +27,17 @@ Testamos numa tabela temporária com três carros, sem mexer em `veiculo`:
 
 O mesmo problema apareceu no nosso esquema com a coluna antiga: `cor` já era NOT NULL sem valor padrão. O código não podia parar de gravar `cor` antes da 003, senão o `INSERT` falharia com o mesmo erro 1364. Por isso criamos a `002b_cor_aceita_null` antes de tirar `cor` do código.
 
+NOT NULL em `cor_externa` só faz sentido no fim, e é o que a `002c_cor_externa_not_null` faz (`ALTER TABLE veiculo MODIFY cor_externa VARCHAR(30) NOT NULL`). Ela roda depois do backfill e depois de o código passar a gravar `cor_externa` em todo `INSERT` e `UPDATE`. Nesse ponto nenhuma linha tem NULL, e o código que ainda escreve na tabela já informa a coluna. Daí em diante o banco garante que nenhum carro fica sem cor: um `INSERT` sem `cor_externa` é recusado com o erro 1364. O formulário já exigia a cor.
+
+A 002c também trava o `up` feito sem o backfill. Num banco novo, `php scripts/migrate.php up` aplica 001, 002, 002a e 002b e para na 002c, porque as linhas antigas ainda têm `cor_externa` NULL:
+
+```
+Falha na migration 002c_cor_externa_not_null: SQLSTATE[22004]: Null value not allowed: 1138 Invalid use of NULL value
+Rode php scripts/backfill_cor.php e depois migrate.php up de novo
+```
+
+O runner sai com código 1, sem stack trace, e a 003 não roda. Assim, a coluna `cor` não é apagada antes de as cores serem copiadas. Depois de `php scripts/backfill_cor.php`, o mesmo `up` aplica da 002c à 009. Testamos em 27/11 num banco vazio, `locadora_lab2`, apagado em seguida (saídas no `LEIAME.md`).
+
 ### 3. Soft delete
 
 Carro excluído continua na tabela, só com `deleted_at` preenchido, e pode ser restaurado (basta voltar `deleted_at` para NULL). Se o backfill filtrasse `deleted_at IS NULL`, esses carros ficariam com `cor_externa` NULL, e depois da 003 a cor original deixaria de existir. Quem restaurasse o carro abriria a edição com o campo Cor vazio e teria de digitar de novo uma informação que o sistema perdeu.
@@ -33,7 +46,7 @@ No teste, antes do backfill, criamos e excluímos um carro pelo sistema (placa `
 
 ### 4. Irreversível
 
-Rodamos `php scripts/migrate.php down` logo depois da 003. A coluna `cor` voltou, mas vazia:
+Rodamos `php scripts/migrate.php down` logo depois da 003, em 25/11, quando ela era a última aplicada (a 002c ainda não existia). A coluna `cor` voltou, mas vazia:
 
 ```
 Desfeita: 003_drop_cor
@@ -47,49 +60,56 @@ Se descobrirmos que `cor_externa` deveria ter 40 caracteres, a 002 não pode ser
 
 ## Etapa 2, otimização de consultas
 
-Números do `EXPLAIN` e do `EXPLAIN ANALYZE`, medidos em `locadora_lab` depois de `ANALYZE TABLE cliente, locacao`.
+Números do `EXPLAIN` e do `EXPLAIN ANALYZE`, medidos em 27/11/2026 em `locadora_lab` depois de `ANALYZE TABLE cliente, locacao`. É a mesma tabela do `LEIAME.md`.
+
+O Bimestre I já tinha criado os índices de Q1, Q3 e Q5: `idx_locacao_data_retirada`, `idx_cliente_nome` e o UNIQUE `uq_cliente_cpf` (`SHOW INDEX` do banco `locadora` original no `LEIAME.md`). Por isso as migrations de índice em data, nome e CPF do enunciado não foram criadas, porque seriam índices repetidos. A única migration de índice é a `004_idx_locacao_cliente_data`, o composto da Q4. Para medir o "antes" de verdade, rodamos cada consulta sem o índice, com `IGNORE INDEX (<índice>)`; na Q4, sem o `idx_locacao_cliente_data` da 004. O "depois" é o plano atual.
 
 | Consulta | type antes | key antes | rows antes | type depois | key depois | rows depois |
 | --- | --- | --- | --- | --- | --- | --- |
-| Q1 | range | idx_locacao_data_retirada | 5423 | range | idx_locacao_data_retirada | 5423 |
-| Q2 | ALL | NULL | 199570 | ALL | NULL | 198948 |
-| Q3 | ALL | NULL | 10037 | ALL | NULL | 10032 |
-| Q4 | ref | idx_locacao_cliente | 14 | range | idx_locacao_cliente_data | 7 |
+| Q1 faixa de datas | ALL | NULL | 198792 | range | idx_locacao_data_retirada | 5423 |
+| Q2 `DATE_FORMAT` | ALL | NULL | 198792 | ALL | NULL | 198792 |
+| Q2 reescrita como faixa (= Q1) | ALL | NULL | 198792 | range | idx_locacao_data_retirada | 5423 |
+| Q3 `LIKE '%123'` | ALL | NULL | 9773 | ALL | NULL | 9773 |
+| Q3 reescrita `LIKE 'Cliente teste 123%'` | ALL | NULL | 9773 | range | idx_cliente_nome | 11 |
+| Q4 cliente 4242 + data | ref | idx_locacao_cliente | 14 | range | idx_locacao_cliente_data | 7 |
+| Q5 `cpf = 4242` | ALL | NULL | 9773 | ALL | NULL (possible_keys `uq_cliente_cpf`) | 9773 |
+| Q5 reescrita `cpf = '00000004242'` | ALL | NULL | 9773 | const | uq_cliente_cpf | 1 |
 
-O "antes" já tinha índice para Q1 e Q3: o Bimestre I criou `idx_locacao_data_retirada` e `idx_cliente_nome`, e o `cpf` tem o UNIQUE `uq_cliente_cpf`. Por isso as migrations 004, 005 e 007 do enunciado não foram criadas (seriam índices repetidos), e a única migration de índice é a `004_idx_locacao_cliente_data`. Para ter a Q1 sem índice medida de verdade, rodamos também com `IGNORE INDEX (idx_locacao_data_retirada)`: `type ALL`, `key NULL`, `rows 199570`.
+`rows` é a estimativa do otimizador, recalculada por amostragem a cada `ANALYZE TABLE`. Por isso a medição de 25/11 tinha dado 199570 e 10032, para as mesmas tabelas.
 
-Tempo real da Q1 (`actual time` do `EXPLAIN ANALYZE`, três execuções):
+Tempo real da Q1. É o `actual time` do nó de topo do `EXPLAIN ANALYZE`, em 5 execuções seguidas. A primeira foi descartada, e a média é das outras quatro:
 
-| Situação | Execuções (ms) |
-| --- | --- |
-| Antes da 004, com `idx_locacao_data_retirada` | 67,6 (primeira, cache frio); 22,1; 9,23 |
-| Depois da 004 | 25,4; 23,1; 29,0 |
-| Sem índice (`IGNORE INDEX`) | 117; 147; 113 |
+| Situação | 5 execuções (ms) | Média sem a 1ª |
+| --- | --- | --- |
+| Sem índice (`IGNORE INDEX (idx_locacao_data_retirada)`) | 156; 158; 129; 159; 143 | 147,3 ms |
+| Com `idx_locacao_data_retirada` | 18,5; 18,8; 18,8; 17,8; 18,3 | 18,4 ms |
 
-Reescritas da Parte C:
+Tempo das outras consultas, pelo mesmo método (média de 4 execuções, depois de descartar a primeira), com os índices atuais:
 
 | Consulta | type | key | rows | Tempo |
 | --- | --- | --- | --- | --- |
-| Q2 com `DATE_FORMAT` | ALL | NULL | 198948 | 352 ms |
-| Q2 reescrita como faixa (é a Q1) | range | idx_locacao_data_retirada | 5423 | 23 a 29 ms |
-| Q3 `nome LIKE '%123'` | ALL | NULL | 10032 | 11,2 ms |
-| Q3 reescrita `nome LIKE 'Cliente teste 123%'` | range | idx_cliente_nome | 11 | 0,07 ms |
-| Q5 `cpf = 4242` | ALL (possible_keys `uq_cliente_cpf`) | NULL | 10032 | 9,8 ms |
+| Q2 com `DATE_FORMAT` | ALL | NULL | 198792 | 239,5 ms |
+| Q2 reescrita como faixa (é a Q1) | range | idx_locacao_data_retirada | 5423 | 18,4 ms |
+| Q3 `nome LIKE '%123'` | ALL | NULL | 9773 | 10,0 ms |
+| Q3 reescrita `nome LIKE 'Cliente teste 123%'` | range | idx_cliente_nome | 11 | 0,08 ms |
+| Q4 sem a 004 | ref | idx_locacao_cliente | 14 | 0,10 ms |
+| Q4 com a 004 | range | idx_locacao_cliente_data | 7 | 0,08 ms |
+| Q5 `cpf = 4242` | ALL (possible_keys `uq_cliente_cpf`) | NULL | 9773 | 11,3 ms |
 | Q5 `cpf = '00000004242'` | const | uq_cliente_cpf | 1 | menos de 0,001 ms |
 
 As duas Q3 não devolvem a mesma coisa: `'%123'` acha 10 clientes (nome terminando em 123) e o prefixo acha 11 (123, 1230 a 1239). A reescrita só vale quando a pergunta de negócio é por prefixo.
 
 ### 1. Maior ganho
 
-A migration nova (Q4) mudou pouco: de `ref` em `idx_locacao_cliente`, com 14 linhas lidas e 7 descartadas pelo filtro de data, para `range` em `idx_locacao_cliente_data`, que já lê só as 7 certas. O tempo ficou igual (cerca de 0,06 ms), porque cada cliente tem poucas locações.
+A migration nova (Q4) mudou pouco: de `ref` em `idx_locacao_cliente`, com 14 linhas lidas e 7 descartadas pelo filtro de data, para `range` em `idx_locacao_cliente_data`, que já lê só as 7 certas. O tempo quase não mudou (de 0,10 ms para 0,08 ms), porque cada cliente tem poucas locações.
 
-O maior ganho medido foi o de usar um índice que já existia, e ele aparece nas três colunas do plano. Na Q1, sem índice, `type ALL`, `key NULL` e `rows 199570` (113 a 147 ms); com o índice, `type range`, `key idx_locacao_data_retirada` e `rows 5423` (9 a 29 ms). Na Q3 reescrita, de 10.032 linhas para 11 e de 11,2 ms para 0,07 ms. Na Q5, de `ALL` para `const`, uma linha só.
+O maior ganho medido foi o de usar um índice que já existia, e ele aparece nas três colunas do plano. Na Q1 sem índice: `type ALL`, `key NULL` e `rows 198792`, em média 147,3 ms. Com o índice: `type range`, `key idx_locacao_data_retirada` e `rows 5423`, em média 18,4 ms, cerca de 8 vezes mais rápido. Na Q3 reescrita, de 9.773 linhas para 11 e de 10,0 ms para 0,08 ms. Na Q5, de `ALL` para `const`, uma linha só.
 
 ### 2. Índice que existia e não foi usado
 
 Três casos:
 
-- Q2: `DATE_FORMAT(data_retirada, '%Y-%m')` aplica uma função à coluna. O índice guarda `data_retirada`, não o resultado da função, então o MySQL calcula a função em todas as linhas (`ALL`, 352 ms).
+- Q2: `DATE_FORMAT(data_retirada, '%Y-%m')` aplica uma função à coluna. O índice guarda `data_retirada`, não o resultado da função, então o MySQL calcula a função em todas as linhas (`ALL`, 239,5 ms, contra 18,4 ms da mesma pergunta escrita como faixa).
 - Q3: `LIKE '%123'` começa com `%`. O índice é ordenado pelo começo do texto e não serve para achar o fim.
 - Q5: `cpf = 4242` compara texto com número. O MySQL converte o `cpf` de cada linha para número antes de comparar (`'00000004242'`, `'4242'` e `'4242.0'` viram o mesmo 4242), e com isso não consegue usar o índice: `uq_cliente_cpf` aparece em `possible_keys`, mas `key` fica NULL.
 
@@ -120,10 +140,10 @@ Sim. Os cinco painéis falam de locações: quantas (contagem), quanto (`valor`)
 
 ### O que acontece se o ETL rodar duas vezes?
 
-Rodamos duas vezes. O resultado foi o mesmo nas duas: fato com 200.017 linhas (igual a `locacao`), soma de `valor` 58.655.224,46, `dim_tempo` com 2.922 dias, `dim_carro` com 34, `dim_cliente` com 10.006 e `dim_filial` com 5. Nenhuma linha diverge de `locacao` em status ou valor.
+Rodamos duas vezes seguidas, e de novo em 27/11, depois da devolução das locações 11 a 15. O resultado foi o mesmo em todas: fato com 200.017 linhas (igual a `locacao`), soma de `valor` 58.655.224,46, `dim_tempo` com 2.922 dias, `dim_carro` com 34, `dim_cliente` com 10.006 e `dim_filial` com 5. Nenhuma linha diverge de `locacao` em status ou valor: são 0 divergentes, contando as 5 locações que passaram de ABERTA para FINALIZADA. O total de `valor` não mudou com a devolução, porque o ETL já estimava a locação aberta pela mesma conta, diária vezes dias até a data prevista.
 
 - `dim_tempo` usa `INSERT IGNORE`: os dias que já existem são ignorados pela chave primária.
-- As outras dimensões usam `ON DUPLICATE KEY UPDATE` em `id_origem`, que é UNIQUE: a linha existente é atualizada e mantém a mesma chave substituta (`sk_*`), então a fato não perde as referências. Efeito colateral: cada tentativa consome um número do `AUTO_INCREMENT` (depois de duas execuções, `dim_carro` tem 34 linhas e o próximo `sk_carro` é 65). Os buracos não atrapalham, porque a chave substituta não tem significado.
+- As outras dimensões usam `ON DUPLICATE KEY UPDATE` em `id_origem`, que é UNIQUE: a linha existente é atualizada e mantém a mesma chave substituta (`sk_*`), então a fato não perde as referências. Efeito colateral: cada tentativa consome um número do `AUTO_INCREMENT` (depois da última execução, em 27/11, `dim_carro` tem 34 linhas e o próximo `sk_carro` é 67). Os buracos não atrapalham, porque a chave substituta não tem significado.
 - A fato é recarga completa (`DELETE` e `INSERT`), então não duplica.
 
 Sem esses cuidados (um `INSERT` simples nas dimensões e sem o `DELETE` na fato), a segunda execução duplicaria as dimensões ou falharia na chave, e os painéis contariam cada locação duas vezes.

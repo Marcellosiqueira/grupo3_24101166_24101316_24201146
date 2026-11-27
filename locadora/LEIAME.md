@@ -138,7 +138,7 @@ As triggers continuam funcionando com `app_locadora`, porque rodam com os privil
 
 ## Limitações
 
-- Não há tela de devolução: o enunciado pede só cadastro e listagem, e o carro locado por esta tela fica LOCADO.
+- Não há tela de devolução: o enunciado pede só cadastro e listagem, e o carro locado por esta tela fica LOCADO. Para a demonstração da Parte 02, cinco locações foram devolvidas por SQL (`scripts/devolver_demo.sql`, explicado no fim deste arquivo).
 - `sp_abrir_locacao`, do Bimestre I, não olha `deleted_at`. A aplicação não a usa, e `app_locadora` não tem `EXECUTE`.
 - Carro novo não recebe registro em `documento_veiculo`, que não faz parte do formulário.
 
@@ -189,6 +189,152 @@ No Laragon descrito em "Como executar", pelo navegador simulado (curl com cookie
 | No Apache: `public/` | Responde |
 | No Apache: `config/config.php`, `controllers/`, `models/`, `views/`, `logs/`, `banco/`, `testes/`, `backup_locadora.sql`, `LEIAME.md`, `.htaccess` | 403 |
 
+## Parte 02: como rodar do zero
+
+Tudo roda em `locadora_lab`, a cópia do `locadora`; o banco original não é tocado. Comandos no Prompt de Comando, de dentro da pasta `locadora` (o PowerShell não aceita o `<`). No Laragon o root não tem senha: aperte Enter quando o `-p` pedir. As senhas de `admin_locadora` e `bi_locadora` são as de `config.example.php`.
+
+```bat
+:: Etapa 0: copia do banco, contas e configuracao
+mysql -u root -p -e "CREATE DATABASE locadora_lab CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci"
+mysql -u root -p locadora_lab < banco/locadora_backup_parte02.sql
+mysql -u root -p < banco/usuarios_sgbd.sql
+mysql -u root -p -e "GRANT SELECT, INSERT, UPDATE ON locadora_lab.* TO 'app_locadora'@'localhost'; GRANT ALL PRIVILEGES ON locadora_lab.* TO 'admin_locadora'@'localhost'; FLUSH PRIVILEGES;"
+copy config\config.example.php config\config.php
+mysql -u admin_locadora -p locadora_lab < scripts/gerar_carga.sql
+
+:: Etapas 1 e 2: migrations. O primeiro up para na 002c, de proposito
+php scripts/migrate.php up
+php scripts/backfill_cor.php
+php scripts/migrate.php up
+
+:: Etapa 3: conta do BI, carros liberados para a demonstracao, ETL e paineis
+mysql -u root -p < banco/usuario_bi.sql
+mysql -u admin_locadora -p locadora_lab < scripts/devolver_demo.sql
+mysql -u admin_locadora -p locadora_lab < scripts/etl_dw.sql
+mysql -u admin_locadora -p -t locadora_lab < scripts/paineis.sql
+```
+
+O primeiro `php scripts/migrate.php up` aplica 001, 002, 002a e 002b e para na 002c com código de saída 1:
+
+```
+Aplicada: 001_baseline
+Aplicada: 002_add_cor_externa
+Aplicada: 002a_vw_veiculos_disponiveis_cor_externa
+Aplicada: 002b_cor_aceita_null
+Falha na migration 002c_cor_externa_not_null: SQLSTATE[22004]: Null value not allowed: 1138 Invalid use of NULL value
+Rode php scripts/backfill_cor.php e depois migrate.php up de novo
+```
+
+Nesse ponto o código já grava `cor_externa`, mas as cores dos carros antigos ainda não foram copiadas. A 003, que apaga `cor`, não roda, então nenhuma cor se perde. O backfill copia as cores, e o segundo `up` aplica da 002c à 009.
+
+Essa sequência foi testada em 27/11/2026 num banco vazio, `locadora_lab2`, carregado com `banco/locadora_backup_parte02.sql`. Saídas reais:
+
+| Passo | Resultado |
+| --- | --- |
+| Depois da carga do backup | 30 carros, 30 com `cor` |
+| Primeiro `up` | Para na 002c com a mensagem acima, `exit=1`, sem stack trace; `schema_migrations` com 001 a 002b; 30 carros com `cor` e 0 com `cor_externa` |
+| `backfill_cor.php` | `Lote: 30 linhas`, `Lote: 0 linhas` |
+| Segundo `up` | Aplica da 002c à 009, `exit=0`; `cor_externa` NOT NULL, 30 de 30 preenchidas |
+| `down` 8 vezes (da 009 à 002c) e `up` de novo | `cor_externa` volta a aceitar NULL; o `up` reaplica da 002c à 009 |
+
+Depois do teste, `locadora_lab2` foi apagado, e o `GRANT` de `admin_locadora` nele foi revogado.
+
+## Parte 02, Etapa 0: preparação
+
+- `locadora_lab` foi criado a partir de `banco/locadora_backup_parte02.sql`, o dump do `locadora` feito antes de qualquer mudança. Esse dump também é o backup que recupera os dados se um passo de contrair der errado.
+- `app_locadora` recebeu `SELECT, INSERT, UPDATE` em `locadora_lab`, e `admin_locadora` recebeu `ALL PRIVILEGES`. O `config.php` aponta `DB_NAME` para `locadora_lab` e tem `MIG_USER` e `MIG_PASS` (`admin_locadora`) para os scripts de linha de comando.
+- `scripts/gerar_carga.sql` foi gerado com IA e revisado antes de rodar: só tem `INSERT`, sem `DROP`, `DELETE` ou `UPDATE`. Foi executado uma vez, com `admin_locadora`. Resultado: 10.006 clientes (10.000 `Cliente teste <n>`, com CPF `LPAD(n, 11, '0')`, em 5 cidades) e 200.017 locações (17 do Bimestre I e 200.000 da carga). As retiradas vão de 2023-01-01 a 2025-12-30, com devolução prevista de 1 a 7 dias depois e valores de 100 a 499. Status: 2,0% CANCELADA, 25,1% ABERTA e 72,9% FINALIZADA.
+
+## Parte 02, Etapa 1: migrations
+
+- `scripts/migrate.php` é o runner da Aula 30 com as três mudanças do enunciado: só roda pela linha de comando (`PHP_SAPI`), lê `config/config.php` e conecta com `MIG_USER`, e procura as migrations em `../migrations/`.
+- Cada migration roda dentro de um `try/catch`, no `up` e no `down`. Se o MySQL recusar, o runner mostra só `Falha na migration <nome>: <erro>`, sem stack trace, e sai com código 1. A migration que falhou não entra em `schema_migrations`, e as seguintes não rodam. No erro 1138 da 002c, o runner acrescenta `Rode php scripts/backfill_cor.php e depois migrate.php up de novo`.
+- Expandir e contrair em `veiculo` (a tabela `carros` do enunciado), na ordem em que rodou. A 002a, a 002b e a 002c não estão no roteiro:
+  - `002_add_cor_externa`: `cor_externa` nasce NULL;
+  - `002a_vw_veiculos_disponiveis_cor_externa`: a view do Bimestre I passa a ler `cor_externa`, senão ficaria inválida depois da 003;
+  - `002b_cor_aceita_null`: `cor` era NOT NULL sem valor padrão e impediria o código de parar de gravá-la;
+  - `scripts/backfill_cor.php`: copia em lotes de 1.000, sem filtrar `deleted_at`;
+  - `002c_cor_externa_not_null`: depois do backfill, `cor_externa` passa a ser obrigatória (o `down` volta a aceitar NULL);
+  - o código passa a ler e gravar só `cor_externa` (`CarroModel`, `CarroController` e formulário);
+  - `003_drop_cor`.
+- A 002c foi criada depois das outras. Por isso, em `locadora_lab`, ela foi aplicada em 27/11, depois da 009: o runner aplica toda migration que não está em `schema_migrations`, e o resultado é o mesmo. Num banco novo ela roda no lugar certo, entre a 002b e a 003, como mostra o teste do zero acima. Nenhuma migration já aplicada foi editada.
+- O CRUD de carros foi testado depois da 002c pela conexão da aplicação (`getConnection()`, que mostrou `locadora_lab / app_locadora@localhost`), numa transação desfeita no fim. Criar, editar (cor Prata para Azul), listar e excluir funcionaram. Um `INSERT` sem `cor_externa` foi recusado pelo banco com `1364 Field 'cor_externa' doesn't have a default value`. O formulário já exigia a cor.
+- As respostas às perguntas estão em `respostas.md`.
+
+Saída de `SELECT * FROM schema_migrations;` em `locadora_lab`, com tudo aplicado:
+
+```
++------------------------------------------+---------------------+
+| version                                  | aplicada_em         |
++------------------------------------------+---------------------+
+| 001_baseline                             | 2026-11-25 10:16:11 |
+| 002_add_cor_externa                      | 2026-11-25 10:16:23 |
+| 002a_vw_veiculos_disponiveis_cor_externa | 2026-11-25 10:17:56 |
+| 002b_cor_aceita_null                     | 2026-11-25 10:17:56 |
+| 002c_cor_externa_not_null                | 2026-11-27 12:03:45 |
+| 003_drop_cor                             | 2026-11-25 10:18:19 |
+| 004_idx_locacao_cliente_data             | 2026-11-25 10:19:09 |
+| 005_dim_tempo                            | 2026-11-25 10:19:45 |
+| 006_dim_carro                            | 2026-11-25 10:19:45 |
+| 007_dim_cliente                          | 2026-11-25 10:19:45 |
+| 008_dim_filial                           | 2026-11-25 10:19:45 |
+| 009_fato_locacao                         | 2026-11-25 10:19:45 |
++------------------------------------------+---------------------+
+```
+
+## Parte 02, Etapa 2: otimização de consultas
+
+**Índices que já existiam.** Três dos índices pedidos já existiam desde o Bimestre I:
+
+- `idx_cliente_nome` (`cliente.nome`) e o UNIQUE `uq_cliente_cpf` (`cliente.cpf`), criados em `sql/Laboratorio01_Grupo3.sql`;
+- `idx_locacao_data_retirada` (`locacao.data_retirada`), criado em `sql/script_parte2.sql`.
+
+Saída de `SHOW INDEX` no banco `locadora` original, que nunca recebeu migration da Parte 02 (colunas `Table`, `Non_unique`, `Key_name`, `Seq_in_index` e `Column_name`):
+
+```
+mysql> SHOW INDEX FROM locadora.locacao;
+locacao  0  PRIMARY                      1  id_locacao
+locacao  1  idx_locacao_aberta           1  data_real_devolucao
+locacao  1  idx_locacao_cliente          1  id_cliente
+locacao  1  idx_locacao_filial_ret       1  id_filial_retirada
+locacao  1  fk_locacao_veiculo           1  id_veiculo
+locacao  1  fk_locacao_filial_devolucao  1  id_filial_devolucao
+locacao  1  idx_locacao_data_retirada    1  data_retirada
+
+mysql> SHOW INDEX FROM locadora.cliente;
+cliente  0  PRIMARY             1  id_cliente
+cliente  0  uq_cliente_cpf      1  cpf
+cliente  0  uk_cliente_num_cnh  1  num_cnh
+cliente  0  uk_cliente_email    1  email
+cliente  1  idx_cliente_nome    1  nome
+```
+
+Criar esses índices de novo só traria custo de escrita, sem ganho de leitura. Por isso só a `004_idx_locacao_cliente_data` (o índice composto `locacao (id_cliente, data_retirada)`) foi criada, e as migrations do BI começam na 005. Em `locadora_lab`, `SHOW INDEX FROM locacao` tem as mesmas sete linhas e mais duas da 004 (`idx_locacao_cliente_data`, colunas `id_cliente` e `data_retirada`).
+
+**Tabela de registro.** Medida em 27/11/2026 em `locadora_lab`, depois de `ANALYZE TABLE cliente, locacao`. Como os índices de Q1, Q3 e Q5 já existiam, o "antes" foi medido sem o índice, com `IGNORE INDEX (<índice>)` na mesma consulta. Na Q4, o "antes" ignora a `idx_locacao_cliente_data` da 004. O "depois" é o plano atual, com todos os índices.
+
+| Consulta | `type` antes | `key` antes | `rows` antes | `type` depois | `key` depois | `rows` depois |
+| --- | --- | --- | --- | --- | --- | --- |
+| Q1 faixa de datas | ALL | NULL | 198792 | range | idx_locacao_data_retirada | 5423 |
+| Q2 `DATE_FORMAT` | ALL | NULL | 198792 | ALL | NULL | 198792 |
+| Q2 reescrita como faixa (= Q1) | ALL | NULL | 198792 | range | idx_locacao_data_retirada | 5423 |
+| Q3 `LIKE '%123'` | ALL | NULL | 9773 | ALL | NULL | 9773 |
+| Q3 reescrita `LIKE 'Cliente teste 123%'` | ALL | NULL | 9773 | range | idx_cliente_nome | 11 |
+| Q4 cliente 4242 + data | ref | idx_locacao_cliente | 14 | range | idx_locacao_cliente_data | 7 |
+| Q5 `cpf = 4242` | ALL | NULL | 9773 | ALL | NULL (possible_keys `uq_cliente_cpf`) | 9773 |
+| Q5 reescrita `cpf = '00000004242'` | ALL | NULL | 9773 | const | uq_cliente_cpf | 1 |
+
+Na forma original, Q2, Q3 e Q5 continuam `ALL` mesmo com o índice, por causa da função na coluna, do `%` no começo e da conversão de texto para número. As reescritas usam o índice. `rows` é a estimativa do otimizador, recalculada por amostragem a cada `ANALYZE TABLE`. Por isso a medição de 25/11 tinha dado 199570 e 10032; `respostas.md` usa os números de hoje, os mesmos desta tabela.
+
+**Tempo real da Q1.** É o `actual time` do nó de topo do `EXPLAIN ANALYZE`, em 5 execuções seguidas. A primeira foi descartada, e a média é das outras quatro.
+
+| Situação | 5 execuções (ms) | Média sem a 1ª |
+| --- | --- | --- |
+| Antes: sem índice (`IGNORE INDEX (idx_locacao_data_retirada)`) | 156; 158; 129; 159; 143 | **147,3 ms** |
+| Depois: com `idx_locacao_data_retirada` | 18,5; 18,8; 18,8; 17,8; 18,3 | **18,4 ms** |
+
+Tempo real da Q1: antes **147,3 ms** | depois **18,4 ms**. Nos dois casos a consulta devolveu 5.423 linhas.
+
 ## Parte 02, Etapa 3: modelo estrela
 
 Tabelas criadas pelas migrations `005` a `009` em `locadora_lab`, carregadas por `scripts/etl_dw.sql`. Consultas dos painéis em `scripts/paineis.sql`.
@@ -227,7 +373,7 @@ Não há medida semiaditiva nesta fato. Seria o caso de um retrato, como a quilo
 
 ### Fichas e resultados dos painéis
 
-Saídas reais em `locadora_lab`, depois do ETL.
+Saídas reais em `locadora_lab`, depois do ETL de 27/11/2026.
 
 ```
 PAINEL: 1, modelos de carro mais alugados
@@ -276,11 +422,11 @@ Operação OLAP:         (x) roll up  ( ) drill down  (x) slice  ( ) dice  ( ) p
 
 | status | locacoes | faturamento | ticket_medio |
 | --- | --- | --- | --- |
-| ABERTA | 50148 | 15027639.16 | 299.67 |
-| FINALIZADA | 145876 | 43627585.30 | 299.07 |
+| ABERTA | 50143 | 15019312.66 | 299.53 |
+| FINALIZADA | 145881 | 43635911.80 | 299.12 |
 | TOTAL | 196024 | 58655224.46 | 299.22 |
 
-FINALIZADA é o faturamento realizado; ABERTA é estimado.
+FINALIZADA é o faturamento realizado; ABERTA é estimado. Números depois da devolução das locações 11 a 15 (seção "carros liberados para a demonstração"): antes dela eram ABERTA 50148, 15027639.16, 299.67 e FINALIZADA 145876, 43627585.30, 299.07, com o mesmo TOTAL.
 
 ```
 PAINEL: 4, filial com mais locações
@@ -350,3 +496,137 @@ FLUSH PRIVILEGES;
 | `painel` por POST | 404 |
 | `bi_locadora`: `SELECT` em `fato_locacao` | 200017 |
 | `bi_locadora`: `SELECT` em `locacao` ou `cliente`; `DELETE` em `fato_locacao` | Negados com 1142 |
+
+### Consultas dos painéis
+
+As mesmas de `scripts/paineis.sql`, que roda as seis de uma vez.
+
+```sql
+-- Painel 1: modelos de carro mais alugados (ranking)
+SELECT c.modelo, COUNT(*) AS locacoes
+FROM fato_locacao f
+JOIN dim_carro c ON c.sk_carro = f.sk_carro
+WHERE f.status <> 'CANCELADA'
+GROUP BY c.modelo
+ORDER BY locacoes DESC
+LIMIT 10;
+
+-- Painel 2: locacoes por mes (evolucao)
+SELECT t.ano_mes, COUNT(*) AS locacoes, SUM(f.valor) AS faturamento
+FROM fato_locacao f
+JOIN dim_tempo t ON t.sk_tempo = f.sk_tempo
+WHERE f.status <> 'CANCELADA'
+GROUP BY t.ano_mes
+ORDER BY t.ano_mes;
+
+-- Painel 3: faturamento total e ticket medio
+SELECT COALESCE(f.status, 'TOTAL') AS status,
+       COUNT(*) AS locacoes,
+       SUM(f.valor) AS faturamento,
+       ROUND(AVG(f.valor), 2) AS ticket_medio
+FROM fato_locacao f
+WHERE f.status <> 'CANCELADA'
+GROUP BY f.status WITH ROLLUP;
+
+-- Painel 4: filial de retirada com mais locacoes (ranking e participacao)
+SELECT fl.nome AS filial, fl.cidade, COUNT(*) AS locacoes,
+       ROUND(100 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS participacao_pct
+FROM fato_locacao f
+JOIN dim_filial fl ON fl.sk_filial = f.sk_filial
+WHERE f.status <> 'CANCELADA'
+GROUP BY fl.nome, fl.cidade
+ORDER BY locacoes DESC
+LIMIT 5;
+
+-- Painel 4, alternativa: cidade do cliente
+SELECT cl.cidade, COUNT(*) AS locacoes,
+       ROUND(100 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS participacao_pct
+FROM fato_locacao f
+JOIN dim_cliente cl ON cl.sk_cliente = f.sk_cliente
+WHERE f.status <> 'CANCELADA'
+GROUP BY cl.cidade
+ORDER BY locacoes DESC
+LIMIT 5;
+
+-- Painel 5 (livre): dia da semana da retirada
+SELECT t.dia_semana,
+       COUNT(*) AS locacoes,
+       ROUND(AVG(f.dias), 2) AS dias_medios,
+       ROUND(100 * AVG(f.status = 'CANCELADA'), 2) AS cancelamento_pct
+FROM fato_locacao f
+JOIN dim_tempo t ON t.sk_tempo = f.sk_tempo
+GROUP BY t.dia_semana
+ORDER BY FIELD(t.dia_semana, 'Segunda','Terca','Quarta','Quinta','Sexta','Sabado','Domingo');
+```
+
+## Parte 02: carros liberados para a demonstração
+
+**Motivo.** Depois da carga, os 30 carros ativos ficaram LOCADO: a trigger `trg_locacao_ai_status` do Bimestre I roda em cada locação ABERTA inserida. Sem carro DISPONIVEL não dá para mostrar a abertura de locação na apresentação, e o sistema não tem tela de devolução.
+
+**Como.** A devolução é feita pela própria locação, como faria uma tela de devolução. Cinco locações abertas passam para FINALIZADA, com data real de devolução e valor. Quem libera cada carro é a trigger `trg_locacao_au_status`, que roda quando `data_real_devolucao` deixa de ser NULL. `veiculo.status` não é alterado direto, para o banco continuar aplicando a sua regra. As locações escolhidas foram a 11 a 15: são locações originais do Bimestre I, abertas em cinco carros diferentes (Corolla Cross, Compass, Onix, Cronos e T-Cross), com devolução prevista entre 17 e 21/09/2026. O SQL está em `scripts/devolver_demo.sql` e rodou em 27/11/2026 com `admin_locadora`, antes do ETL final:
+
+```sql
+UPDATE locacao
+   SET data_real_devolucao = data_prevista_devolucao,
+       valor_total = valor_diaria_contratada
+                     * GREATEST(DATEDIFF(data_prevista_devolucao, data_retirada), 1),
+       status = 'FINALIZADA'
+ WHERE id_locacao IN (11, 12, 13, 14, 15)
+   AND status = 'ABERTA';
+```
+
+O valor é a diária contratada vezes os dias, a mesma regra das locações finalizadas do Bimestre I. `km_devolucao` fica NULL porque não há esse dado, e a trigger mantém o `km_atual` do carro.
+
+| Conferência | Resultado |
+| --- | --- |
+| `ROW_COUNT()` | 5 |
+| Locações 11 a 15 | FINALIZADA; valores 2.029,30, 2.029,30, 909,30, 1.329,30 e 2.029,30 (soma 8.326,50) |
+| Carros ativos | 5 DISPONIVEL e 25 LOCADO (antes: 30 LOCADO) |
+| `vw_veiculos_disponiveis` | 5 carros |
+| `log_locacao` | 5 linhas ABERTA para FINALIZADA, gravadas pela trigger de auditoria. O usuário aparece como `root@localhost` porque, dentro da trigger, `CURRENT_USER()` é o definidor dela |
+
+Depois disso, `etl_dw.sql` e `paineis.sql` rodaram de novo. A fato continua com 200.017 linhas, igual a `locacao`, e a soma de `valor` continua 58.655.224,46. Só o painel 3 mudou: o ETL já estimava as abertas pela mesma conta, então 5 locações e 8.326,50 passaram de ABERTA para FINALIZADA, sem mudar o total. Os painéis 1, 2, 4 e 5 deram as mesmas linhas de antes.
+
+Limite: a carga deixou cerca de 1.600 locações sintéticas ABERTA em cada carro, e a trigger olha só a locação devolvida. Por isso esses 5 carros aparecem DISPONIVEL e ainda têm locações sintéticas abertas. Com dados reais, um carro tem no máximo uma locação aberta, e isso não aconteceria.
+
+## Parte 02, Etapa 4: entrega
+
+Entregue como `locadora.zip` no Canvas, com a pasta `locadora/`. O zip leva o código do sistema, `scripts/` (`migrate.php`, `backfill_cor.php`, `gerar_carga.sql`, `etl_dw.sql`, `paineis.sql` e `devolver_demo.sql`), `migrations/` completa (todas com `up` e `down`), `respostas.md` e este `LEIAME.md`, com a saída de `schema_migrations` na Etapa 1. Ficam de fora:
+
+- `config/config.php`, que tem senhas (o zip leva `config.example.php`);
+- o conteúdo de `logs/`;
+- qualquer dump com a carga de volume.
+
+Os dumps que vão no zip, `backup_locadora.sql` e `banco/locadora_backup_parte02.sql`, são de antes da carga.
+
+## Checklists da Parte 02
+
+**Etapa 0**
+
+- [x] O sistema abre no navegador usando `locadora_lab` e `app_locadora`. Evidência: `config.php` com `DB_NAME = 'locadora_lab'` e `DB_USER = 'app_locadora'`; `getConnection()` mostrou `locadora_lab / app_locadora@localhost`; a rota `painel` respondeu 200 com admin (Etapa 3); em 27/11, rotas sem login redirecionaram para o login (302).
+- [x] `SELECT COUNT(*) FROM locacao;` retorna mais de 200 mil: **200017**.
+- [x] O MySQL é 8.0.18 ou superior: `SELECT VERSION();` mostrou **8.4.3**.
+
+**Etapa 1**
+
+- [x] `schema_migrations` lista `001`, `002` e `003`: saída completa na Etapa 1, de `001_baseline` a `009_fato_locacao`, com a 002c.
+- [x] `migrate.php` só roda pela linha de comando, e a aplicação continua usando `app_locadora`. Evidência: chamado pelo servidor embutido do PHP (`php -S`, SAPI `cli-server`), respondeu `Somente linha de comando.`; no Apache, a pasta `scripts/` também é bloqueada pelo `.htaccess` da raiz (`Require all denied`). `SHOW GRANTS FOR app_locadora` mostra só `SELECT, INSERT, UPDATE ON locadora_lab.*`.
+- [x] Nenhum carro, inclusive os excluídos, ficou sem `cor_externa`. Evidência: `SELECT COUNT(*) FROM veiculo WHERE cor_externa IS NULL` deu 0, com 34 carros, 4 deles excluídos; desde a 002c a coluna é NOT NULL, e o banco recusa carro sem cor (1364).
+- [x] O CRUD de Carros funcionou antes e depois do contrair. Antes: carro `TST1A01` criado e excluído pelo sistema antes do backfill (`respostas.md`, pergunta 3). Depois: criar, editar, listar e excluir pela conexão da aplicação, em 27/11, depois da 003 e da 002c (Etapa 1).
+- [x] Nenhuma migration foi editada depois de aplicada. Evidência: `git log -- locadora/migrations` mostra um único commit (`69b6968`), e `git status` não mostra arquivo alterado em `migrations/`; a 002c é um arquivo novo. A correção de tamanho de `cor_externa` também seria uma migration nova (`respostas.md`, pergunta 4).
+
+**Etapa 2**
+
+- [x] Existe uma migration para cada índice criado, com `down` que o remove. Só um índice foi criado, pela `004_idx_locacao_cliente_data` (`down`: `DROP INDEX idx_locacao_cliente_data ON locacao`). Os índices de `data_retirada`, `nome` e `cpf` já existiam desde o Bimestre I (`SHOW INDEX` na Etapa 2).
+- [x] A tabela de registro está preenchida, com `type`, `key` e `rows` antes e depois, e com o tempo da Q1 (147,3 ms sem índice e 18,4 ms com índice).
+- [x] Pelo menos um caso de índice ignorado foi reescrito e confirmado no `EXPLAIN`. Foram três: Q2 de `ALL` para `range` (5.423 linhas), Q3 de `ALL` para `range` em `idx_cliente_nome` (11 linhas) e Q5 de `ALL` para `const` em `uq_cliente_cpf` (1 linha).
+
+**Etapa 3**
+
+- [x] O grão da fato está escrito em uma frase: "Uma linha da fato representa uma locação."
+- [x] As migrations do esquema dimensional têm `up` e `down`: são cinco, da 005 à 009 (`dim_filial` além das quatro do enunciado), todas com `CREATE TABLE` no `up` e `DROP TABLE` no `down`. O `down` e o `up` delas rodaram no teste do zero em `locadora_lab2`.
+- [x] O ETL carrega as dimensões antes da fato, e o total da fato bate com `locacao`: 200.017 e 200.017, depois do ETL de 27/11.
+- [x] Todo atributo do `SELECT` sem agregação está no `GROUP BY`: conferido nas seis consultas acima. O MySQL roda com `ONLY_FULL_GROUP_BY` e recusaria qualquer violação.
+- [x] Rankings usam `ORDER BY ... DESC` e `LIMIT`: painel 1 (`LIMIT 10`) e painel 4 nas duas versões (`LIMIT 5`).
+- [x] As decisões sobre canceladas e carros excluídos estão registradas neste `LEIAME.md`, em "Decisões de modelagem".
+- [x] Cada painel tem a sua ficha e a sua consulta executada: fichas e resultados em "Fichas e resultados dos painéis", consultas em "Consultas dos painéis".

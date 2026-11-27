@@ -27,6 +27,24 @@ function separar(string $sql): array {
     return [trim($partes[0]), trim($partes[1] ?? '')];
 }
 
+// Roda uma secao (up ou down) de uma migration. Se o MySQL recusar, mostra
+// so a mensagem, sem stack trace, e sai com codigo 1 para o shell perceber.
+function executar(PDO $pdo, string $versao, string $sql): void {
+    try {
+        // query() + closeCursor() em vez de exec(): com exec(), o SELECT 1 da
+        // 001 deixa o resultado pendente e o INSERT seguinte falha (erro 2014).
+        $pdo->query($sql)->closeCursor();
+    } catch (PDOException $e) {
+        $msg = "Falha na migration $versao: " . $e->getMessage() . PHP_EOL;
+        // 1138 = Invalid use of NULL value: ainda ha carro com cor_externa NULL
+        if (str_starts_with($versao, '002c_') && ($e->errorInfo[1] ?? null) == 1138) {
+            $msg .= 'Rode php scripts/backfill_cor.php e depois migrate.php up de novo' . PHP_EOL;
+        }
+        fwrite(STDERR, $msg);
+        exit(1);
+    }
+}
+
 // 3) as migrations ficam em ../migrations/
 $pasta = __DIR__ . '/../migrations';
 
@@ -48,9 +66,7 @@ if ($comando === 'up') {
             continue;
         }
         [$up] = separar(file_get_contents($arquivo));
-        // query() + closeCursor() em vez de exec(): com exec(), o SELECT 1 da
-        // 001 deixa o resultado pendente e o INSERT abaixo falha (erro 2014).
-        $pdo->query($up)->closeCursor();
+        executar($pdo, $versao, $up);
         $pdo->prepare("INSERT INTO schema_migrations (version) VALUES (?)")
             ->execute([$versao]);
         echo "Aplicada: $versao\n";
@@ -65,7 +81,7 @@ if ($comando === 'up') {
         exit;
     }
     [, $down] = separar(file_get_contents("$pasta/$ultima.sql"));
-    $pdo->query($down)->closeCursor();
+    executar($pdo, $ultima, $down);
     $pdo->prepare("DELETE FROM schema_migrations WHERE version = ?")
         ->execute([$ultima]);
     echo "Desfeita: $ultima\n";
