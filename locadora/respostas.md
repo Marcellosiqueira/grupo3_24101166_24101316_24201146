@@ -56,7 +56,7 @@ total   com_cor   com_cor_externa
 
 O `down` desfaz a estrutura, não os dados: o `DROP COLUMN` apagou os valores, e nenhum `ADD COLUMN` os traz de volta. Para recuperar usaríamos o backup feito antes de mexer (Parte 01, Etapa 3; aqui, `banco/locadora_backup_parte02.sql` da Etapa 0): restaurar em um banco à parte e copiar `cor` por `id_veiculo`. O backup só tem os carros que existiam na hora dele. Depois do teste aplicamos a 003 de novo.
 
-Se descobrirmos que `cor_externa` deveria ter 40 caracteres, a 002 não pode ser editada: ela já está em `schema_migrations` em todos os bancos onde rodou, e o runner nunca a executa de novo. Editar faria o arquivo dizer uma coisa e os bancos terem outra, e um banco novo ficaria diferente dos antigos. O certo é uma migration nova, por exemplo `010_cor_externa_40.sql`, com `up` `ALTER TABLE veiculo MODIFY cor_externa VARCHAR(40) NULL;` e `down` voltando para `VARCHAR(30)`.
+Se descobrirmos que `cor_externa` deveria ter 40 caracteres, a 002 não pode ser editada: ela já está em `schema_migrations` em todos os bancos onde rodou, e o runner nunca a executa de novo. Editar faria o arquivo dizer uma coisa e os bancos terem outra, e um banco novo ficaria diferente dos antigos. O certo é uma migration nova, por exemplo `010_cor_externa_40.sql`, com `up` `ALTER TABLE veiculo MODIFY cor_externa VARCHAR(40) NOT NULL;` e `down` `ALTER TABLE veiculo MODIFY cor_externa VARCHAR(30) NOT NULL;`. O `MODIFY` redefine a coluna inteira, então precisa repetir o `NOT NULL` que a 002c colocou: sem ele, a coluna volta a aceitar NULL e a regra se perde.
 
 ## Etapa 2, otimização de consultas
 
